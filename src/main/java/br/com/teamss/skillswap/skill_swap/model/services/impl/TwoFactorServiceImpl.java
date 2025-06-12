@@ -1,10 +1,21 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
-import br.com.teamss.skillswap.skill_swap.model.entities.TwoFactorConfig;
-import br.com.teamss.skillswap.skill_swap.model.entities.User;
-import br.com.teamss.skillswap.skill_swap.model.repositories.TwoFactorConfigRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
-import br.com.teamss.skillswap.skill_swap.model.services.TwoFactorService;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.time.Instant; // ALTERADO
+import java.time.temporal.ChronoUnit;
+import java.util.Base64;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -22,22 +33,13 @@ import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
 import com.warrenstrange.googleauth.GoogleAuthenticator;
 import com.warrenstrange.googleauth.GoogleAuthenticatorKey;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.time.Instant; // ALTERADO
-import java.time.temporal.ChronoUnit;
-import java.util.Base64;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
+import br.com.teamss.skillswap.skill_swap.model.entities.TwoFactorConfig;
+import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.repositories.TwoFactorConfigRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
+import br.com.teamss.skillswap.skill_swap.model.services.TwoFactorService;
+import jakarta.annotation.PostConstruct;
 
 @Service
 public class TwoFactorServiceImpl implements TwoFactorService {

@@ -1,7 +1,7 @@
 package br.com.teamss.skillswap.skill_swap.model.mapper;
 
 import br.com.teamss.skillswap.skill_swap.dto.RegisterDTO;
-import br.com.teamss.skillswap.skill_swap.dto.VerifyDTO;
+// A importação de VerifyDTO foi removida daqui
 import br.com.teamss.skillswap.skill_swap.dto.ErrorResponse;
 import br.com.teamss.skillswap.skill_swap.dto.SuccessResponse;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
@@ -16,13 +16,13 @@ public interface UserMapper {
 
     // Map RegisterDTO to User
     @Mapping(target = "birthDate", expression = "java(registerDTO.getBirthDate() != null ? Date.valueOf(registerDTO.getBirthDate()) : null)")
-    @Mapping(target = "password", ignore = true) // Password is encoded separately
-    @Mapping(target = "verificationCode", ignore = true) // Set manually
-    @Mapping(target = "verified", ignore = true) // Set manually
-    @Mapping(target = "verificationCodeExpiry", ignore = true) // Set manually
-    @Mapping(target = "createdAt", ignore = true) // Set manually
-    @Mapping(target = "updatedAt", ignore = true) // Set manually
-    @Mapping(target = "verifiedAt", ignore = true) // Set manually
+    @Mapping(target = "password", ignore = true)
+    @Mapping(target = "verificationCode", ignore = true)
+    @Mapping(target = "verified", ignore = true)
+    @Mapping(target = "verificationCodeExpiry", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    // A linha para "updatedAt" foi removida daqui
+    @Mapping(target = "verifiedAt", ignore = true)
     User registerDTOToUser(RegisterDTO registerDTO);
 
     // Map User to SuccessResponse
