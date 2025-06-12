@@ -25,7 +25,7 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityFilterChainConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:4200}")
+    @Value("${cors.allowed-origins:http://localhost:4200,https://skillswap-frontend-tmub.onrender.com}")
     private String[] allowedOrigins;
 
     private final UserDetailsService userDetailsService;
