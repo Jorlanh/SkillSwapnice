@@ -22,8 +22,7 @@ public class AccessLogServiceImpl implements AccessLogService {
     public void logAccess(UUID userId, HttpServletRequest request) {
         String ipAddress = request.getRemoteAddr();
 
-        // Cria e salva o registro de acesso sem informações de localização,
-        // já que a funcionalidade foi removida.
+        // Cria e salva o registro de acesso sem informações de localização.
         AccessLog accessLog = new AccessLog(
             userId,
             ipAddress,
