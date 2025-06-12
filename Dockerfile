@@ -1,5 +1,4 @@
-# Estágio 1: Build - Usando a imagem oficial do Eclipse Temurin com JDK 21
-# e instalando o Maven manualmente para garantir a compatibilidade.
+# Estágio 1: Build da Aplicação
 FROM eclipse-temurin:21-jdk AS build
 
 # Instala o Maven
@@ -17,17 +16,17 @@ COPY src ./src
 RUN mvn clean install -DskipTests
 
 
-# Estágio 2: Execução - Usando a imagem oficial e leve do Eclipse Temurin (apenas JRE)
+# Estágio 2: Execução da Aplicação
 FROM eclipse-temurin:21-jre
 
 # Define o diretório de trabalho
 WORKDIR /app
 
-# Copia apenas o .jar compilado do estágio de build para a imagem final
-COPY --from=build /app/target/skill-swap-0.0.1-SNAPSHOT.jar .
+# Copia apenas o .jar compilado do estágio de build
+COPY --from=build /app/target/skill-swap-0.0.1-SNAPSHOT.jar app.jar
 
 # Expõe a porta da aplicação
 EXPOSE 8080
 
 # Comando para iniciar a aplicação
-ENTRYPOINT ["java", "-jar", "skill-swap-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["java", "-jar", "app.jar"]
