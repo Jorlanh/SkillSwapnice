@@ -2,7 +2,6 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
 import br.com.teamss.skillswap.skill_swap.dto.LessonScheduleRequestDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Lesson;
-import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.LessonRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
@@ -19,14 +18,17 @@ import com.google.api.services.calendar.model.EventAttendee;
 import com.google.api.services.calendar.model.EventDateTime;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
-import jakarta.annotation.PostConstruct; // Importação correta
+import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -47,31 +49,35 @@ public class LessonServiceImpl implements LessonService {
     @Autowired
     private UserRepository userRepository;
 
+    // Injeta o CONTEÚDO do JSON a partir da variável de ambiente
+    @Value("${GOOGLE_CREDENTIALS_JSON}")
+    private String credentialsJsonString;
+
     private static final JsonFactory JSON_FACTORY = GsonFactory.getDefaultInstance();
     private static final String APPLICATION_NAME = "SkillSwap";
-    
-    // O calendarService não é mais 'final' porque será inicializado no método init()
     private Calendar calendarService;
 
-    // O construtor agora está vazio e não faz nada, as dependências são injetadas via @Autowired nos campos
     public LessonServiceImpl() {
     }
 
-    // Este método será executado pelo Spring DEPOIS que o bean for construído e as dependências injetadas
     @PostConstruct
     public void init() throws IOException, GeneralSecurityException {
-        final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-        InputStream inputStream = this.getClass().getResourceAsStream("/credentials.json");
-        if (inputStream == null) {
-            throw new IllegalStateException("Arquivo de credenciais 'credentials.json' não encontrado no classpath.");
+        if (credentialsJsonString == null || credentialsJsonString.isEmpty()) {
+            throw new IllegalStateException("A variável de ambiente 'GOOGLE_CREDENTIALS_JSON' não foi definida.");
         }
-        GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream)
-                .createScoped(Collections.singletonList("https://www.googleapis.com/auth/calendar"));
-        this.calendarService = new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, new HttpCredentialsAdapter(credentials))
-                .setApplicationName(APPLICATION_NAME)
-                .build();
+
+        // Cria um InputStream a partir da String da variável de ambiente
+        try (InputStream inputStream = new ByteArrayInputStream(credentialsJsonString.getBytes(StandardCharsets.UTF_8))) {
+            final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
+            GoogleCredentials credentials = GoogleCredentials.fromStream(inputStream)
+                    .createScoped(Collections.singletonList("https://www.googleapis.com/auth/calendar"));
+            this.calendarService = new Calendar.Builder(HTTP_TRANSPORT, JSON_FACTORY, new HttpCredentialsAdapter(credentials))
+                    .setApplicationName(APPLICATION_NAME)
+                    .build();
+        }
     }
 
+    // ... O resto da sua classe (scheduleLesson, createCalendarEvent, etc.) continua aqui sem alterações ...
     @Override
     public Lesson scheduleLesson(LessonScheduleRequestDTO lessonRequest) {
         User teacher = userRepository.findById(lessonRequest.getTeacherId())
