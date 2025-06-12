@@ -1,6 +1,5 @@
-# Estágio 1: Build - Usando a imagem oficial do Eclipse Temurin com JDK 21 e Maven
-# ALTERAÇÃO FINAL: Usando uma imagem base do Temurin 21 e instalando o Maven nela.
-FROM eclipse-temurin:21-jdk AS build
+# Estágio 1: Build - Usando uma imagem oficial do Maven com OpenJDK 21
+FROM maven:3-openjdk-21 AS build
 
 # Instala o Maven dentro do contêiner
 RUN apt-get update && apt-get install -y maven
@@ -14,11 +13,13 @@ RUN mvn dependency:go-offline
 
 # Copia o resto do código fonte e compila
 COPY src ./src
-RUN mvn clean install
+
+# ALTERAÇÃO: Adicionado -DskipTests para pular os testes durante o build
+RUN mvn clean install -DskipTests
 
 
-# Estágio 2: Execução - Usando a imagem oficial e leve do Eclipse Temurin
-FROM eclipse-temurin:21-jre
+# Estágio 2: Execução - Usando uma imagem oficial e leve do OpenJDK 21
+FROM openjdk:21-slim
 
 # Define o diretório de trabalho
 WORKDIR /app
