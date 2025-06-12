@@ -33,11 +33,11 @@ public class ChatMessage {
     private String content;
 
     @Lob
-    @Column(name = "voice_data", length = 10485760) // 10MB limit for voice
+    @Column(name = "voice_data", columnDefinition = "bytea") // Adicionado columnDefinition
     private byte[] voiceData;
 
     @Lob
-    @Column(name = "file_data", length = 104857600) // 100MB limit for files
+    @Column(name = "file_data", columnDefinition = "bytea") // Adicionado columnDefinition
     private byte[] fileData;
 
     @Column(name = "file_type")
