@@ -1,20 +1,25 @@
 package br.com.teamss.skillswap.skill_swap.model.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,72 +41,43 @@ public class SecurityFilterChainConfig {
         return new JwtAuthenticationFilter(userDetailsService, jwtTokenUtil);
     }
 
-    /**
-     * 
-     * @param http
-     * @return
-     * @throws Exception
-     * 
-     * 
-     */
-    // @Bean
-    // public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    //     http
-    //             .authorizeHttpRequests(auth -> auth
-    //                     .requestMatchers("/api/chat/**", "/api/lesson/**", "/video-call").authenticated()
-    //                     .requestMatchers(
-    //                             "/api/home/posts/*/like",
-    //                             "/api/home/posts/*/repost",
-    //                             "/api/home/posts/*/comment",
-    //                             "/api/home/posts",
-    //                             "/api/home/communities/*/join",
-    //                             "/api/home/notifications/**"
-    //                     ).authenticated()
-    //                     .requestMatchers(
-    //                             "/api/register",
-    //                             "/api/register/resend-code",
-    //                             "/api/verify",
-    //                             "/api/home/posts",
-    //                             "/api/home/posts/*/share",
-    //                             "/api/home/share/click",
-    //                             "/api/home/communities",
-    //                             "/api/home/trending-topics",
-    //                             "/api/search/**"
-    //                     ).permitAll()
-    //                     .anyRequest().permitAll())
-    //             .csrf(csrf -> csrf.disable())
-    //             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-    //             .headers(headers -> headers
-    //                     .frameOptions(frame -> frame.sameOrigin())
-    //                     .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; frame-ancestors 'self'"))
-    //                     .xssProtection(xss -> xss.headerValue(org.springframework.security.web.header.writers.XXssProtectionHeaderWriter.HeaderValue.ENABLED))
-    //                     .httpStrictTransportSecurity(hsts -> hsts.maxAgeInSeconds(31536000).includeSubDomains(true))
-    //                     .contentTypeOptions(content -> content.disable()))
-    //             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
-    //             .exceptionHandling(handling -> handling
-    //                     .authenticationEntryPoint((request, response, authException) -> response.sendError(401, "Unauthorized"))
-    //                     .accessDeniedHandler((request, response, accessDeniedException) -> response.sendError(403, "Forbidden")));
-
-    //     return http.build();
-    // }
-
-     @Bean
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf
-                // É importante desabilitar o CSRF para APIs e permitir o H2 Console
-                .ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**"))
-                .disable()
-            )
-            .headers(headers -> headers
-                // Permite que o H2 Console seja renderizado em um frame
-                .frameOptions(frameOptions -> frameOptions.sameOrigin())
-            )
+            // Desabilita CSRF, pois a aplicação é stateless e usa tokens JWT
+            .csrf(AbstractHttpConfigurer::disable)
+            
+            // Configura a política de sessão para ser stateless
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            
+            // Configura as regras de autorização para cada endpoint
             .authorizeHttpRequests(auth -> auth
-                // A REGRA DE OURO: PERMITE QUALQUER REQUISIÇÃO, FODA-SE
-                .anyRequest().permitAll()
-            );
-        
+                // Endpoints públicos (não precisam de autenticação)
+                .requestMatchers(
+                    AntPathRequestMatcher.antMatcher("/h2-console/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/login"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/register"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/verify"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/password-reset/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/**")
+                ).permitAll()
+
+                // Endpoint para WebSocket (requer uma configuração especial, mas vamos permitir por enquanto)
+                .requestMatchers(AntPathRequestMatcher.antMatcher("/video-call/**")).permitAll()
+
+                // Qualquer outra requisição precisa de autenticação
+                .anyRequest().authenticated()
+            )
+            
+            // Adiciona o filtro de autenticação JWT antes do filtro padrão de usuário/senha
+            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
+            
+            // Permite que o console H2 seja renderizado em um frame
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+
         return http.build();
     }
 
@@ -111,14 +87,15 @@ public class SecurityFilterChainConfig {
     }
 
     @Bean
-    public CorsFilter corsFilter() {
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With"));
+        configuration.setAllowCredentials(true);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(allowedOrigins));
-        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Métodos específicos
-        config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With")); // Cabeçalhos específicos
-        config.setAllowCredentials(true);
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 }
