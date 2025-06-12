@@ -35,5 +35,8 @@ build/
 # Arquivo de credenciais
 src/main/resources/credentials.json
 
+# Arquivos de configuração local
+application.properties
+
 # Diretórios de log
 logs/
