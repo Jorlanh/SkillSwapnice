@@ -1,6 +1,6 @@
-# Estágio 1: Build da Aplicação com Maven
-# Usamos uma imagem base do Maven para compilar o código Java e gerar o .jar
-FROM maven:3.8.5-openjdk-17 AS build
+# Estágio 1: Build da Aplicação com Maven usando uma imagem com JDK 21
+# ALTERAÇÃO: Trocamos 'maven:3.8.5-openjdk-17' por uma imagem mais recente com Java 21
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 
 # Define o diretório de trabalho dentro do contêiner
 WORKDIR /app
@@ -19,8 +19,8 @@ RUN mvn clean install
 
 
 # Estágio 2: Execução da Aplicação
-# Usamos uma imagem base do Java (bem menor que a do Maven) para rodar a aplicação
-FROM openjdk:17-jdk-slim
+# ALTERAÇÃO: Trocamos 'openjdk:17-jdk-slim' por uma imagem slim com Java 21
+FROM eclipse-temurin:21-jdk-slim
 
 # Define o diretório de trabalho
 WORKDIR /app
