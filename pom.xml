@@ -5,8 +5,9 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
-        <relativePath/> </parent>
+        <version>3.4.5</version> <!-- Atualize para a versão mais recente compatível -->
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
     <groupId>br.com.teamss.skillswap</groupId>
     <artifactId>skill-swap</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -14,6 +15,7 @@
     <description>Demo project for Spring Boot</description>
     <properties>
         <java.version>21</java.version>
+        <bucket4j.version>8.10.0</bucket4j.version> <!-- Adicione a versão do Bucket4j -->
     </properties>
     <dependencies>
 
@@ -46,13 +48,41 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
-        
+
+        <!-- Rate Limiting com Bucket4j -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk8-core</artifactId>
+            <version>8.10.1</version>
+        </dependency>
+        <!-- Cache para Bucket4j (Exemplo com Caffeine, pode usar JCache, Hazelcast, etc.) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+
+        <!-- Banco de Dados -->
+        <!-- H2 (Comentado - Não será usado como padrão) -->
+        <!--
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+         -->
+        <!-- PostgreSQL (Adicionado/Descomentado) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
 
+
+        <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -71,6 +101,7 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Google Authenticator, ZXing, Google Calendar -->
         <dependency>
             <groupId>com.warrenstrange</groupId>
             <artifactId>googleauth</artifactId>
@@ -89,35 +120,37 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>2.0.0</version>
+            <version>2.0.0</version> <!-- Verifique a versão mais recente -->
         </dependency>
         <dependency>
             <groupId>com.google.oauth-client</groupId>
-            <artifactId>google-oauth-client</artifactId>
-            <version>1.39.0</version>
+            <artifactId>google-oauth-client-jetty</artifactId> <!-- Ou outra implementação -->
+            <version>1.39.0</version> <!-- Verifique a versão mais recente -->
         </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-calendar</artifactId>
-            <version>v3-rev20250404-2.0.0</version>
+            <version>v3-rev20250404-2.0.0</version> <!-- Verifique a versão mais recente -->
         </dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
-            <version>1.23.0</version>
+            <version>1.23.0</version> <!-- Verifique a versão mais recente -->
         </dependency>
 
+        <!-- SendGrid & Twilio -->
         <dependency>
             <groupId>com.sendgrid</groupId>
             <artifactId>sendgrid-java</artifactId>
-            <version>4.10.1</version>
+            <version>4.10.1</version> <!-- Verifique a versão mais recente -->
         </dependency>
         <dependency>
             <groupId>com.twilio.sdk</groupId>
             <artifactId>twilio</artifactId>
-            <version>10.9.0</version>
+            <version>10.9.0</version> <!-- Verifique a versão mais recente -->
         </dependency>
-        
+
+        <!-- Utilitários -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -126,9 +159,10 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>1.6.3</version>
+            <version>1.6.3</version> <!-- Use uma versão estável e compatível -->
         </dependency>
-        
+
+        <!-- Testes -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -139,11 +173,12 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Jakarta Annotations (necessário para @PostConstruct, etc. em Java 9+) -->
         <dependency>
-    <groupId>jakarta.annotation</groupId>
-    <artifactId>jakarta.annotation-api</artifactId>
-    <version>2.1.1</version> 
-    </dependency>
+            <groupId>jakarta.annotation</groupId>
+            <artifactId>jakarta.annotation-api</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -151,18 +186,23 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
+                <version>3.11.0</version> <!-- Use uma versão recente -->
                 <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>1.18.34</version>
+                            <version>${lombok.version}</version> <!-- Use a propriedade definida -->
                         </path>
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
-                            <version>1.6.3</version>
+                            <version>1.6.3</version> <!-- Use a mesma versão da dependência -->
+                        </path>
+                         <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version> <!-- Se usar Lombok com MapStruct -->
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
@@ -181,17 +221,17 @@
             </plugin>
         </plugins>
         <resources>
-        <resource>
-            <directory>src/main/resources</directory>
-            <filtering>true</filtering>
-            <includes>
-                <include>**/*.properties</include>
-                <include>**/*.xml</include>
-                <include>**/*.json</include>
-                <include>**/*.sql</include>
-                <include>**/geoip/*.mmdb</include>
-            </includes>
-        </resource>
-    </resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering> <!-- Mantém o filtering se necessário -->
+                <includes>
+                    <include>**/*.properties</include>
+                    <include>**/*.xml</include>
+                    <include>**/*.json</include>
+                    <include>**/*.sql</include>
+                    <include>**/geoip/*.mmdb</include> <!-- Exemplo, ajuste conforme necessário -->
+                </includes>
+            </resource>
+        </resources>
     </build>
 </project>

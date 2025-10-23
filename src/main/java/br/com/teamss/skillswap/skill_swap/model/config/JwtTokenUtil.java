@@ -6,8 +6,10 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils; // Import StringUtils
 
 import javax.crypto.SecretKey;
+import jakarta.annotation.PostConstruct; // Import PostConstruct
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,11 +18,26 @@ import java.util.function.Function;
 @Component
 public class JwtTokenUtil {
 
-    private String secret = "z4B8g9pL2vF3kM7rJ5hG1wE0cT6yU4iNnQ9sV8uAFG8KK4LLASLD3KJDJ44J3fD7oP5xK6bZ1aC2eS5lH4j";
+    // Carrega o segredo a partir das propriedades da aplicação (application.properties)
+    // que por sua vez referencia uma variável de ambiente (JWT_SECRET)
+    @Value("${jwt.secret}")
+    private String secretValue;
+
+    // A chave secreta será inicializada após a injeção do valor
+    private SecretKey secretKey;
 
     // O expiration pode continuar vindo do properties sem problema
     @Value("${jwt.expiration}")
     private Long expiration;
+
+    // Método para inicializar a SecretKey após a injeção do valor 'secretValue'
+    @PostConstruct
+    public void init() {
+        if (!StringUtils.hasText(secretValue)) {
+            throw new IllegalArgumentException("JWT secret key cannot be empty or null. Please set the JWT_SECRET environment variable.");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(secretValue.getBytes());
+    }
 
     // Gera um token JWT para o usuário
     public String generateToken(UserDetails userDetails) {
@@ -30,13 +47,13 @@ public class JwtTokenUtil {
 
     // Cria o token com base nos claims e no subject (username)
     private String createToken(Map<String, Object> claims, String subject) {
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
+        // Usa a secretKey inicializada
         return Jwts.builder()
-                .claims(claims) // Método não depreciado
-                .subject(subject) // Método não depreciado
-                .issuedAt(new Date(System.currentTimeMillis())) // Método não depreciado
-                .expiration(new Date(System.currentTimeMillis() + expiration)) // Método não depreciado
-                .signWith(key, Jwts.SIG.HS512) // Usando a nova enumeração de algoritmos
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date(System.currentTimeMillis()))
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(secretKey, Jwts.SIG.HS512) // Usa a secretKey
                 .compact();
     }
 
@@ -59,9 +76,9 @@ public class JwtTokenUtil {
 
     // Extrai todas as claims do token
     private Claims getAllClaimsFromToken(String token) {
-        SecretKey key = Keys.hmacShaKeyFor(secret.getBytes());
+        // Usa a secretKey inicializada
         return Jwts.parser()
-                .verifyWith(key)
+                .verifyWith(secretKey) // Usa a secretKey
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
