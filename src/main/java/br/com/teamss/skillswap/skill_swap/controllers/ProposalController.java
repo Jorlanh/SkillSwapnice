@@ -3,6 +3,7 @@ package br.com.teamss.skillswap.skill_swap.controllers;
 import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Proposal;
 import br.com.teamss.skillswap.skill_swap.model.services.ProposalService;
+import jakarta.validation.Valid; // Import @Valid
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,7 +18,7 @@ public class ProposalController {
     private ProposalService proposalService;
 
     @PostMapping("/send")
-    public ResponseEntity<Proposal> sendProposal(@RequestBody ProposalRequestDTO proposalRequest) {
+    public ResponseEntity<Proposal> sendProposal(@Valid @RequestBody ProposalRequestDTO proposalRequest) { // Adicionado @Valid
         Proposal savedProposal = proposalService.sendProposal(proposalRequest);
         return ResponseEntity.ok(savedProposal);
     }
