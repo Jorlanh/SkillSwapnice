@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID; // Importar UUID
 
 @Service
 public class ProposalServiceImpl implements ProposalService {
@@ -40,16 +41,16 @@ public class ProposalServiceImpl implements ProposalService {
     public Proposal sendProposal(ProposalRequestDTO proposalRequest) {
         // 1. Buscar as entidades REAIS do banco de dados
         User sender = userRepository.findById(proposalRequest.getSenderId())
-            .orElseThrow(() -> new EntityNotFoundException("Usuário remetente não encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Usuário remetente não encontrado"));
         
         User receiver = userRepository.findById(proposalRequest.getReceiverId())
-            .orElseThrow(() -> new EntityNotFoundException("Usuário destinatário não encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Usuário destinatário não encontrado"));
 
         Skill offeredSkill = skillRepository.findById(proposalRequest.getOfferedSkillId())
-            .orElseThrow(() -> new EntityNotFoundException("Habilidade oferecida não encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Habilidade oferecida não encontrada"));
 
         Skill requestedSkill = skillRepository.findById(proposalRequest.getRequestedSkillId())
-            .orElseThrow(() -> new EntityNotFoundException("Habilidade solicitada não encontrada"));
+                .orElseThrow(() -> new EntityNotFoundException("Habilidade solicitada não encontrada"));
 
         // 2. Criar a nova proposta com os objetos gerenciados pelo Hibernate
         Proposal proposal = new Proposal();
@@ -70,13 +71,13 @@ public class ProposalServiceImpl implements ProposalService {
                                " em troca de " + savedProposal.getRequestedSkill().getName();
         
         emailService.sendNotification(receiverEmail, "Nova Proposta no SkillSwap", messageContent);
-        // ... resto da lógica de notificação
         
         return savedProposal;
     }
 
     @Override
-    public List<Proposal> getUserProposals(Long userId) {
+    // CORRIGIDO: O tipo do parâmetro foi alterado de Long para UUID.
+    public List<Proposal> getUserProposals(UUID userId) {
         return proposalRepository.findBySenderIdOrReceiverId(userId);
     }
 
