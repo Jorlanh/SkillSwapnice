@@ -2,12 +2,15 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
 import br.com.teamss.skillswap.skill_swap.model.entities.*;
 import br.com.teamss.skillswap.skill_swap.model.repositories.*;
+import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
 import br.com.teamss.skillswap.skill_swap.model.services.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -23,7 +26,10 @@ public class PostServiceImpl implements PostService {
     private final ShareLinkRepository shareLinkRepository;
 
     @Autowired
-    public PostServiceImpl(PostRepository postRepository, UserRepository userRepository, 
+    private FileUploadService fileUploadService;
+
+    @Autowired
+    public PostServiceImpl(PostRepository postRepository, UserRepository userRepository,
                            NotificationService notificationService, LikeRepository likeRepository,
                            RepostRepository repostRepository, ShareLinkRepository shareLinkRepository) {
         this.postRepository = postRepository;
@@ -35,22 +41,24 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post createPost(UUID userId, String title, String content, String imageUrl, String videoUrl) {
+    public Post createPost(UUID userId, String title, String content, MultipartFile image, MultipartFile video) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+
+        String imageUrl = fileUploadService.uploadFile(image);
+        String videoUrl = fileUploadService.uploadFile(video);
 
         Post post = new Post();
         post.setUser(user);
         post.setTitle(title);
         post.setContent(content);
         post.setProfile(user.getProfile());
-        // post.setImageUrl(imageUrl);
-        // post.setVideoUrl(videoUrl);
+        post.setImageUrl(imageUrl);
+        post.setVideoUrl(videoUrl);
         post.setLikesCount(0);
         post.setRepostsCount(0);
         post.setCommentsCount(0);
         post.setSharesCount(0);
-
         post.setCreatedAt(Instant.now());
 
         return postRepository.save(post);
@@ -85,7 +93,7 @@ public class PostServiceImpl implements PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
-        if (!repostRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) { // CORRIGIDO
+        if (!repostRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
             Repost repost = new Repost(originalPost, user);
             repostRepository.save(repost);
             originalPost.setRepostsCount(originalPost.getRepostsCount() + 1);

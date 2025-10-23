@@ -49,6 +49,13 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.cloudinary/cloudinary-core -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-core</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+        
         <!-- Rate Limiting com Bucket4j -->
         <dependency>
             <groupId>com.bucket4j</groupId>

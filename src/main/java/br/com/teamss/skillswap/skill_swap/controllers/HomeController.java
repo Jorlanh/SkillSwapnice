@@ -13,7 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -29,7 +29,7 @@ public class HomeController {
     private final TrendingService trendingService;
 
     @Autowired
-    public HomeController(PostService postService, CommunityService communityService, 
+    public HomeController(PostService postService, CommunityService communityService,
                           NotificationService notificationService, ShareLinkRepository shareLinkRepository,
                           TrendingService trendingService) {
         this.postService = postService;
@@ -68,18 +68,9 @@ public class HomeController {
             @RequestParam String title,
             @RequestParam String content,
             @RequestParam(required = false) MultipartFile image,
-            @RequestParam(required = false) MultipartFile video) {
-        if (image != null && image.getSize() > 20 * 1024 * 1024) {
-            return ResponseEntity.badRequest().body(null);
-        }
-        if (video != null && video.getSize() > 100 * 1024 * 1024) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        String imageUrl = image != null ? "/uploads/images/" + image.getOriginalFilename() : null;
-        String videoUrl = video != null ? "/uploads/videos/" + image.getOriginalFilename() : null;
-
-        Post post = postService.createPost(userId, title, content, imageUrl, videoUrl);
+            @RequestParam(required = false) MultipartFile video) throws IOException {
+        
+        Post post = postService.createPost(userId, title, content, image, video);
         return ResponseEntity.ok(post);
     }
 

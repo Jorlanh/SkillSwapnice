@@ -1,36 +1,14 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
-import br.com.teamss.skillswap.skill_swap.model.entities.Community;
-import br.com.teamss.skillswap.skill_swap.model.entities.CommunityMember;
-import br.com.teamss.skillswap.skill_swap.model.entities.CommunityMemberId;
-import br.com.teamss.skillswap.skill_swap.model.entities.User;
-import br.com.teamss.skillswap.skill_swap.model.entities.Post;
-import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
-import br.com.teamss.skillswap.skill_swap.model.entities.Like;
-import br.com.teamss.skillswap.skill_swap.model.entities.LikeId;
-import br.com.teamss.skillswap.skill_swap.model.entities.Comment;
-import br.com.teamss.skillswap.skill_swap.model.entities.Repost;
-import br.com.teamss.skillswap.skill_swap.model.entities.RepostId;
-import br.com.teamss.skillswap.skill_swap.model.entities.ShareLink;
-import br.com.teamss.skillswap.skill_swap.model.repositories.CommunityRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.PostRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.CommunityMemberRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.ProfileRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.LikeRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.CommentRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.RepostRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.ShareLinkRepository;
-import br.com.teamss.skillswap.skill_swap.model.services.CommunityService;
 import br.com.teamss.skillswap.skill_swap.dto.CommentDTO;
+import br.com.teamss.skillswap.skill_swap.model.entities.*;
+import br.com.teamss.skillswap.skill_swap.model.repositories.*;
+import br.com.teamss.skillswap.skill_swap.model.services.CommunityService;
+import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
@@ -48,6 +26,9 @@ public class CommunityServiceImpl implements CommunityService {
     private final CommentRepository commentRepository;
     private final RepostRepository repostRepository;
     private final ShareLinkRepository shareLinkRepository;
+
+    @Autowired
+    private FileUploadService fileUploadService;
 
     @Autowired
     public CommunityServiceImpl(
@@ -80,18 +61,14 @@ public class CommunityServiceImpl implements CommunityService {
 
     @Override
     public Community joinCommunity(UUID communityId, UUID userId) {
-        System.out.println("Iniciando joinCommunity com communityId: " + communityId + ", userId: " + userId);
         joinCommunityWithMemberRepository(communityId, userId);
         return communityRepository.findById(communityId)
                 .orElseThrow(() -> new RuntimeException("Comunidade não encontrada!"));
     }
 
     private CommunityMember joinCommunityWithMemberRepository(UUID communityId, UUID userId) {
-        System.out.println("Iniciando joinCommunityWithMemberRepository com communityId: " + communityId + ", userId: " + userId);
-
         Community community = communityRepository.findById(communityId)
                 .orElseThrow(() -> new RuntimeException("Comunidade não encontrada com ID: " + communityId));
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com ID: " + userId));
 
@@ -114,58 +91,23 @@ public class CommunityServiceImpl implements CommunityService {
         return savedMember;
     }
 
-    private static final String UPLOAD_DIR = "uploads/";
-    private static final long MAX_IMAGE_SIZE = 20 * 1024 * 1024;
-    private static final long MAX_VIDEO_SIZE = 100 * 1024 * 1024;
-
     @Override
     public List<Post> getCommunityPosts(UUID communityId) {
         return postRepository.findByCommunity_CommunityId(communityId);
     }
 
     @Override
-    public Post createCommunityPost(UUID communityId, UUID userId, String title, String content, 
+    public Post createCommunityPost(UUID communityId, UUID userId, String title, String content,
                                     MultipartFile image, MultipartFile video) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
         Community community = communityRepository.findById(communityId)
                 .orElseThrow(() -> new RuntimeException("Comunidade não encontrada!"));
-
         Profile profile = profileRepository.findByUser_UserId(userId)
                 .orElseThrow(() -> new RuntimeException("Perfil não encontrado para usuário com ID: " + userId));
 
-        if (image != null && !image.isEmpty()) {
-            if (image.getSize() > MAX_IMAGE_SIZE) {
-                throw new IllegalArgumentException("A imagem excede o limite de 20MB!");
-            }
-        }
-        if (video != null && !video.isEmpty()) {
-            if (video.getSize() > MAX_VIDEO_SIZE) {
-                throw new IllegalArgumentException("O vídeo excede o limite de 100MB!");
-            }
-        }
-
-        Path uploadPath = Paths.get(UPLOAD_DIR);
-        if (!Files.exists(uploadPath)) {
-            Files.createDirectories(uploadPath);
-        }
-
-        String imageUrl = null;
-        String videoUrl = null;
-
-        if (image != null && !image.isEmpty()) {
-            String imageFileName = UUID.randomUUID() + "_" + image.getOriginalFilename();
-            Path imagePath = uploadPath.resolve(imageFileName);
-            Files.write(imagePath, image.getBytes());
-            imageUrl = UPLOAD_DIR + imageFileName;
-        }
-
-        if (video != null && !video.isEmpty()) {
-            String videoFileName = UUID.randomUUID() + "_" + video.getOriginalFilename();
-            Path videoPath = uploadPath.resolve(videoFileName);
-            Files.write(videoPath, video.getBytes());
-            videoUrl = UPLOAD_DIR + videoFileName;
-        }
+        String imageUrl = fileUploadService.uploadFile(image);
+        String videoUrl = fileUploadService.uploadFile(video);
 
         Post post = new Post();
         post.setUser(user);
@@ -229,7 +171,7 @@ public class CommunityServiceImpl implements CommunityService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
-        if (repostRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) { // CORRIGIDO
+        if (repostRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
             throw new IllegalStateException("Usuário já repostou este post!");
         }
 
