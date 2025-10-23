@@ -49,6 +49,13 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/io.micrometer/micrometer-core -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- https://mvnrepository.com/artifact/com.cloudinary/cloudinary-core -->
         <dependency>
             <groupId>com.cloudinary</groupId>
