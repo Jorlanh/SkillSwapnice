@@ -44,6 +44,9 @@ public class SecurityFilterChainConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // ATIVA A CONFIGURAÇÃO DE CORS QUE VOCÊ DEFINIU ABAIXO
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            
             // Desabilita CSRF, pois a aplicação é stateless e usa tokens JWT
             .csrf(AbstractHttpConfigurer::disable)
             
