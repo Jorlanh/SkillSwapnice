@@ -78,11 +78,11 @@ public class SecurityFilterChainConfig {
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/posts"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-topics"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/communities"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-posts"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-posts")
                     
-                    // WebSockets
-                    AntPathRequestMatcher.antMatcher("/video-call/**"),
-                    AntPathRequestMatcher.antMatcher("/ws/**")
+                    // **CORREÇÃO DE SEGURANÇA: WebSockets não são mais públicos**
+                    // AntPathRequestMatcher.antMatcher("/video-call/**"),
+                    // AntPathRequestMatcher.antMatcher("/ws/**")
                 ).permitAll()
                 .anyRequest().authenticated()
             )

@@ -2,6 +2,7 @@ package br.com.teamss.skillswap.skill_swap.model.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
@@ -10,14 +11,29 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableWebSocket
 public class WebRTCConfig implements WebSocketConfigurer {
 
+    private final JwtTokenUtil jwtTokenUtil;
+    private final UserDetailsService userDetailsService;
+
+    public WebRTCConfig(JwtTokenUtil jwtTokenUtil, UserDetailsService userDetailsService) {
+        this.jwtTokenUtil = jwtTokenUtil;
+        this.userDetailsService = userDetailsService;
+    }
+
     @Bean
     public WebRTCVideoCallHandler webRTCVideoCallHandler() {
         return new WebRTCVideoCallHandler();
     }
 
+    @Bean
+    public JwtHandshakeInterceptor jwtHandshakeInterceptor() {
+        return new JwtHandshakeInterceptor(jwtTokenUtil, userDetailsService);
+    }
+
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        //o endpoint /video-call vai usar nosso handler de WebRTC, e deixa qualquer origem acessar
-        registry.addHandler(webRTCVideoCallHandler(), "/video-call").setAllowedOrigins("*");
+        // Adiciona o interceptor ao endpoint, que irá validar o JWT antes de conectar
+        registry.addHandler(webRTCVideoCallHandler(), "/video-call")
+                .addInterceptors(jwtHandshakeInterceptor())
+                .setAllowedOrigins("*");
     }
 }

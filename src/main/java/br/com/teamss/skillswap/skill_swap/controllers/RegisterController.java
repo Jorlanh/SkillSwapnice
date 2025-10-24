@@ -9,7 +9,7 @@ import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.ProfileRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
-import jakarta.validation.Valid; // Import @Valid
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.sql.Date;
 import java.time.Instant;
 import java.time.LocalDate;
-// import java.time.LocalDateTime; // Removido se não usado
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.Random;
@@ -44,14 +43,17 @@ public class RegisterController {
     private PasswordEncoder passwordEncoder;
 
     @PostMapping("/register")
-    // Adiciona @Valid para ativar as validações do DTO
     public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterDTO registerDTO) {
         if (!registerDTO.getPassword().equals(registerDTO.getConfirmPassword())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("As senhas não coincidem."));
         }
+
+        // **ALTERAÇÃO CONFORME SOLICITADO: Verificações explícitas foram reintroduzidas**
+        // Verifica se o e-mail já está registrado e retorna uma mensagem de erro específica.
         if (userRepository.existsByEmail(registerDTO.getEmail())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("E-mail já registrado."));
         }
+        // Verifica se o nome de usuário já está registrado e retorna uma mensagem de erro específica.
         if (userRepository.existsByUsername(registerDTO.getUsername())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Nome de usuário já registrado."));
         }
@@ -71,27 +73,22 @@ public class RegisterController {
         user.setCreatedAt(Instant.now());
         user.setVerified(false);
 
-        // Cria um novo perfil VAZIO
         Profile newProfile = new Profile();
-        // Associa o perfil ao usuário
         user.setProfile(newProfile);
-        // Associa o usuário ao perfil (relação bidirecional)
         newProfile.setUser(user);
-        // Salva o perfil primeiro se necessário (depende da configuração do Cascade)
-        // profileRepository.save(newProfile); // Pode ser necessário se o Cascade não estiver configurado corretamente
 
         String verificationCode = String.format("%06d", new Random().nextInt(999999));
         user.setVerificationCode(verificationCode);
         user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
 
-        userRepository.save(user); // Salvar o usuário também salva o perfil devido ao Cascade
+        userRepository.save(user);
         emailService.sendVerificationCode(registerDTO.getEmail(), verificationCode);
 
         return ResponseEntity.ok(new SuccessResponse("Cadastro realizado com sucesso! Verifique seu e-mail."));
     }
 
     @PostMapping("/verify")
-    public ResponseEntity<?> verifyUser(@Valid @RequestBody VerifyDTO verifyDTO) { // Adicionado @Valid
+    public ResponseEntity<?> verifyUser(@Valid @RequestBody VerifyDTO verifyDTO) {
         Optional<User> userOpt = userRepository.findByVerificationCode(verifyDTO.getVerificationCode());
         if (userOpt.isEmpty()) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Código de verificação inválido."));
@@ -103,7 +100,6 @@ public class RegisterController {
         }
 
         if (user.getVerificationCodeExpiry() != null && Instant.now().isAfter(user.getVerificationCodeExpiry())) {
-            // Limpa o código expirado para segurança
             user.setVerificationCode(null);
             user.setVerificationCodeExpiry(null);
             userRepository.save(user);
@@ -112,8 +108,8 @@ public class RegisterController {
 
         user.setVerified(true);
         user.setVerifiedAt(Instant.now());
-        user.setVerificationCode(null); // Limpa o código após o uso
-        user.setVerificationCodeExpiry(null); // Limpa a expiração
+        user.setVerificationCode(null);
+        user.setVerificationCodeExpiry(null);
         userRepository.save(user);
 
         return ResponseEntity.ok(new SuccessResponse("Conta verificada com sucesso!"));
