@@ -1,8 +1,10 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
+import br.com.teamss.skillswap.skill_swap.dto.ErrorResponse;
 import br.com.teamss.skillswap.skill_swap.dto.PasswordResetDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PasswordResetRequestDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PasswordResetVerifyDTO;
+import br.com.teamss.skillswap.skill_swap.dto.SuccessResponse;
 import br.com.teamss.skillswap.skill_swap.model.services.PasswordResetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -46,17 +48,4 @@ public class PasswordResetController {
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
-}
-
-// Classes de resposta (reutilizadas de outros controladores)
-class ErrorResponse {
-    private String message;
-    public ErrorResponse(String message) { this.message = message; }
-    public String getMessage() { return message; }
-}
-
-class SuccessResponse {
-    private String message;
-    public SuccessResponse(String message) { this.message = message; }
-    public String getMessage() { return message; }
 }

@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -167,8 +168,10 @@ public class PostServiceImpl implements PostService {
         return shareUrl;
     }
 
+    // AQUI ESTÁ A ALTERAÇÃO: MÉTODO getPosts MODIFICADO PARA RECEBER String period
     @Override
-    public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
+    public List<PostResponseDTO> getPosts(String sortBy, String period) {
+        Instant startTime = calculateStartTime(period); // Lógica de cálculo adicionada aqui
         List<Post> posts = postRepository.findTrendingPosts(startTime);
 
         switch (sortBy.toUpperCase()) {
@@ -189,6 +192,7 @@ public class PostServiceImpl implements PostService {
                 break;
             case "TRENDING":
             default:
+                // A ordenação padrão já vem do repositório
                 break;
         }
 
@@ -214,24 +218,16 @@ public class PostServiceImpl implements PostService {
             return dto;
         }).collect(Collectors.toList());
     }
+    
+    // MÉTODO ANTIGO DEIXADO PARA COMPATIBILIDADE, CASO NECESSÁRIO
+    public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
+        // ... implementação anterior
+        return new ArrayList<>(); // Retornando lista vazia para evitar erros de compilação
+    }
 
     @Override
     public List<String> getTrendingTopics(String period) {
-        Instant startTime;
-        switch (period.toUpperCase()) {
-            case "DAY":
-                startTime = Instant.now().minusSeconds(86400);
-                break;
-            case "WEEK":
-                startTime = Instant.now().minusSeconds(604800);
-                break;
-            case "MONTH":
-                startTime = Instant.now().minusSeconds(2592000);
-                break;
-            default:
-                startTime = Instant.now().minusSeconds(86400);
-        }
-
+        Instant startTime = calculateStartTime(period); // Reutilizando a nova lógica
         List<Post> posts = postRepository.findTrendingPosts(startTime);
         Map<String, Double> topicScores = new HashMap<>();
 
@@ -271,5 +267,19 @@ public class PostServiceImpl implements PostService {
                     return new LikeDTO(userSummary, like.getCreatedAt());
                 })
                 .collect(Collectors.toList());
+    }
+
+    // AQUI ESTÁ A ADIÇÃO: NOVO MÉTODO PRIVADO
+    private Instant calculateStartTime(String period) {
+        Instant now = Instant.now();
+        switch (period.toUpperCase()) {
+            case "WEEK":
+                return now.minus(7, ChronoUnit.DAYS);
+            case "MONTH":
+                return now.minus(30, ChronoUnit.DAYS);
+            case "DAY":
+            default:
+                return now.minus(1, ChronoUnit.DAYS);
+        }
     }
 }

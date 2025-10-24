@@ -11,6 +11,8 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,6 +29,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
     @Override
     public UserDTO toUserDTO(User user) {
+        // ... (código existente)
         ProfileDTO profileDTO = null;
         if (user.getProfile() != null) {
             Profile profile = user.getProfile();
@@ -71,6 +74,8 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
         return userDTO;
     }
+
+    // ... (outros métodos existentes)
 
     @Override
     public List<UserSummaryDTO> findAllSummaries() {
@@ -130,6 +135,21 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     public UserDTO findByUsernameDTO(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com username: " + username));
+        return toUserDTO(user);
+    }
+    
+    // NOVA IMPLEMENTAÇÃO
+    @Override
+    public UserDTO getAuthenticatedUser() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String username;
+        if (principal instanceof UserDetails) {
+            username = ((UserDetails) principal).getUsername();
+        } else {
+            username = principal.toString();
+        }
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Utilizador autenticado não encontrado na base de dados."));
         return toUserDTO(user);
     }
 }

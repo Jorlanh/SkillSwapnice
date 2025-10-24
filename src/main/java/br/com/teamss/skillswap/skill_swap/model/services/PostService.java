@@ -5,7 +5,6 @@ import br.com.teamss.skillswap.skill_swap.dto.PostResponseDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Post;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -15,7 +14,7 @@ public interface PostService {
     Post repost(Long postId, UUID userId);
     Post commentOnPost(Long postId, UUID userId, String content);
     String generateShareLink(Long postId);
-    List<PostResponseDTO> getPosts(String sortBy, Instant startTime);
+    List<PostResponseDTO> getPosts(String sortBy, String period); // Alterado de Instant para String
     List<String> getTrendingTopics(String period);
     void incrementViewCount(Long postId);
     List<LikeDTO> getLikesByPost(Long postId);

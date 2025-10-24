@@ -8,12 +8,13 @@ import java.util.List;
 import java.util.UUID;
 
 public interface UserServiceDTO {
-    public UserDTO toUserDTO(User user);
-    public List<UserSummaryDTO> findAllSummaries();
-    public UserDTO findByIdDTO(UUID id); // Para dados completos (privado)
-    public UserSummaryDTO findSummaryByIdDTO(UUID id); // Para dados públicos
+    UserDTO toUserDTO(User user);
+    List<UserSummaryDTO> findAllSummaries();
+    UserDTO findByIdDTO(UUID id);
+    UserSummaryDTO findSummaryByIdDTO(UUID id);
     void updateVerificationCode(UUID userId, String code);
     void updateVerificationStatus(UUID userId, boolean verified);
     void saveUserDTO(UserDTO userDTO);
-    public UserDTO findByUsernameDTO(String username);
+    UserDTO findByUsernameDTO(String username);
+    UserDTO getAuthenticatedUser(); // NOVO MÉTODO
 }

@@ -1,5 +1,7 @@
 package br.com.teamss.skillswap.skill_swap.model.config;
 
+import br.com.teamss.skillswap.skill_swap.filters.RateLimitInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -14,23 +16,24 @@ import java.util.Locale;
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
 
+    @Autowired
+    private RateLimitInterceptor rateLimitInterceptor;
+
     @Bean
     public ResourceBundleMessageSource messageSource() {
         ResourceBundleMessageSource source = new ResourceBundleMessageSource();
-        source.setBasenames("messages"); // Base name para arquivos messages_*.properties
+        source.setBasenames("messages");
         source.setDefaultEncoding("UTF-8");
         return source;
     }
 
-    // Define um resolvedor de locale padrão que guarda a escolha na sessão.
     @Bean
     public LocaleResolver localeResolver() {
         SessionLocaleResolver slr = new SessionLocaleResolver();
-        slr.setDefaultLocale(Locale.of("pt", "BR")); // Define o português como padrão
+        slr.setDefaultLocale(Locale.of("pt", "BR"));
         return slr;
     }
 
-    // Permite a mudança de idioma através de um parâmetro na URL (ex: ?lang=en)
     @Bean
     public LocaleChangeInterceptor localeChangeInterceptor() {
         LocaleChangeInterceptor lci = new LocaleChangeInterceptor();
@@ -38,9 +41,11 @@ public class WebConfig implements WebMvcConfigurer {
         return lci;
     }
 
-    // Registra o interceptor para que o Spring o utilize
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(localeChangeInterceptor());
+        // Aplica o Rate Limiting aos endpoints de login e password-reset
+        registry.addInterceptor(rateLimitInterceptor)
+                .addPathPatterns("/api/login", "/api/password-reset/**");
     }
 }

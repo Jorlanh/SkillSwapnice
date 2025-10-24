@@ -3,8 +3,8 @@ package br.com.teamss.skillswap.skill_swap.model.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Profile; // Import Profile
-import org.springframework.core.annotation.Order; // Import Order
+import org.springframework.context.annotation.Profile;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -19,7 +19,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import static org.springframework.security.config.Customizer.withDefaults; // Import withDefaults
 
 import java.util.Arrays;
 
@@ -44,59 +43,49 @@ public class SecurityFilterChainConfig {
     }
 
     @Bean
-    @Order(1) // Garante que esta configuração seja aplicada primeiro
-    @Profile("dev") // Aplica esta configuração APENAS quando o perfil 'dev' está ativo
+    @Order(1)
+    @Profile("dev")
     public SecurityFilterChain h2ConsoleSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .securityMatcher(AntPathRequestMatcher.antMatcher("/h2-console/**")) // Aplica APENAS para /h2-console/**
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll()) // Permite tudo dentro do H2 Console
-            .csrf(csrf -> csrf.ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**"))) // Desabilita CSRF para o H2 Console
-            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())); // Permite iframes para o H2 Console
+            .securityMatcher(AntPathRequestMatcher.antMatcher("/h2-console/**"))
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .csrf(csrf -> csrf.ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")))
+            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
         return http.build();
     }
 
 
     @Bean
-    @Order(2) // Esta configuração será aplicada depois da do H2 Console
+    @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            // ATIVA A CONFIGURAÇÃO DE CORS QUE VOCÊ DEFINIU ABAIXO
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-            // Desabilita CSRF, pois a aplicação é stateless e usa tokens JWT
             .csrf(AbstractHttpConfigurer::disable)
-
-            // Configura a política de sessão para ser stateless
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-            // Configura as regras de autorização para cada endpoint
             .authorizeHttpRequests(auth -> auth
-                // Endpoints públicos (não precisam de autenticação)
                 .requestMatchers(
-                    // Rotas de Autenticação/Registro (POST)
+                    // Rotas de Autenticação/Registo
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/login"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/register"),
-
-                    // Rotas de Verificação/Reset de Senha (TODOS os métodos, que são POSTs)
                     AntPathRequestMatcher.antMatcher("/api/verify"),
                     AntPathRequestMatcher.antMatcher("/api/password-reset/**"),
 
-                    // Rotas de Acesso Público (GET)
+                    // Rotas Públicas (GET)
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/**"),
+                    // REGRAS REFINADAS PARA /api/home
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/posts"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-topics"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/communities"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-posts"),
                     
                     // WebSockets
                     AntPathRequestMatcher.antMatcher("/video-call/**"),
                     AntPathRequestMatcher.antMatcher("/ws/**")
                 ).permitAll()
-
-                // Qualquer outra requisição precisa de autenticação
                 .anyRequest().authenticated()
             )
-
-            // Adiciona o filtro de autenticação JWT antes do filtro padrão de usuário/senha
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -112,8 +101,8 @@ public class SecurityFilterChainConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Rate-Limit-Remaining")); // Adicionado X-Rate-Limit-Remaining
-        configuration.setExposedHeaders(Arrays.asList("X-Rate-Limit-Remaining")); // Expor o header de Rate Limit
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Rate-Limit-Remaining"));
+        configuration.setExposedHeaders(Arrays.asList("X-Rate-Limit-Remaining"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
