@@ -27,7 +27,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Skill {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "skill_id")
     private Long skillId;
 

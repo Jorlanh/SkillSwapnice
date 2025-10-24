@@ -1,5 +1,7 @@
 package br.com.teamss.skillswap.skill_swap.model.services;
 
+import br.com.teamss.skillswap.skill_swap.dto.LikeDTO;
+import br.com.teamss.skillswap.skill_swap.dto.PostResponseDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Post;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
@@ -13,7 +15,8 @@ public interface PostService {
     Post repost(Long postId, UUID userId);
     Post commentOnPost(Long postId, UUID userId, String content);
     String generateShareLink(Long postId);
-    List<Post> getPosts(String sortBy, Instant startTime);
-    List<String> getTrendingTopics(String period); // "DAY", "WEEK", "MONTH"
+    List<PostResponseDTO> getPosts(String sortBy, Instant startTime);
+    List<String> getTrendingTopics(String period);
     void incrementViewCount(Long postId);
+    List<LikeDTO> getLikesByPost(Long postId);
 }

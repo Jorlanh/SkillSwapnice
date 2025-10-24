@@ -1,23 +1,26 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
+import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
+import br.com.teamss.skillswap.skill_swap.dto.ProposalResponseDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
+import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.Proposal;
 import br.com.teamss.skillswap.skill_swap.model.entities.Skill;
-import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
-import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.ProposalRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.SkillRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
+import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
 import br.com.teamss.skillswap.skill_swap.model.services.ProposalService;
 import jakarta.persistence.EntityNotFoundException;
-import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID; // Importar UUID
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ProposalServiceImpl implements ProposalService {
@@ -39,7 +42,6 @@ public class ProposalServiceImpl implements ProposalService {
 
     @Override
     public Proposal sendProposal(ProposalRequestDTO proposalRequest) {
-        // 1. Buscar as entidades REAIS do banco de dados
         User sender = userRepository.findById(proposalRequest.getSenderId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário remetente não encontrado"));
         
@@ -52,7 +54,6 @@ public class ProposalServiceImpl implements ProposalService {
         Skill requestedSkill = skillRepository.findById(proposalRequest.getRequestedSkillId())
                 .orElseThrow(() -> new EntityNotFoundException("Habilidade solicitada não encontrada"));
 
-        // 2. Criar a nova proposta com os objetos gerenciados pelo Hibernate
         Proposal proposal = new Proposal();
         proposal.setSender(sender);
         proposal.setReceiver(receiver);
@@ -64,7 +65,6 @@ public class ProposalServiceImpl implements ProposalService {
         
         Proposal savedProposal = proposalRepository.save(proposal);
 
-        // 3. Lógica de notificação continua a mesma...
         String receiverEmail = savedProposal.getReceiver().getEmail();
         String messageContent = "Você recebeu uma proposta de troca de habilidades de " + savedProposal.getSender().getUsername() +
                                ": Oferece " + savedProposal.getOfferedSkill().getName() +
@@ -76,9 +76,21 @@ public class ProposalServiceImpl implements ProposalService {
     }
 
     @Override
-    // CORRIGIDO: O tipo do parâmetro foi alterado de Long para UUID.
-    public List<Proposal> getUserProposals(UUID userId) {
-        return proposalRepository.findBySenderIdOrReceiverId(userId);
+    public List<ProposalResponseDTO> getUserProposals(UUID userId) {
+        List<Proposal> proposals = proposalRepository.findBySenderIdOrReceiverId(userId);
+        
+        return proposals.stream().map(proposal -> {
+            ProposalResponseDTO dto = new ProposalResponseDTO();
+            dto.setProposalId(proposal.getProposalId());
+            dto.setSender(new UserSummaryDTO(proposal.getSender().getUserId(), proposal.getSender().getUsername(), proposal.getSender().getName()));
+            dto.setReceiver(new UserSummaryDTO(proposal.getReceiver().getUserId(), proposal.getReceiver().getUsername(), proposal.getReceiver().getName()));
+            dto.setOfferedSkill(proposal.getOfferedSkill());
+            dto.setRequestedSkill(proposal.getRequestedSkill());
+            dto.setStatus(proposal.getStatus());
+            dto.setCreatedAt(proposal.getCreatedAt());
+            dto.setUpdatedAt(proposal.getUpdatedAt());
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Override

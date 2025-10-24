@@ -1,23 +1,23 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
-import java.time.Instant; // ALTERADO
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import br.com.teamss.skillswap.skill_swap.dto.ProfileDTO;
 import br.com.teamss.skillswap.skill_swap.dto.SkillDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
 import br.com.teamss.skillswap.skill_swap.model.entities.Role;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceDTOImpl implements UserServiceDTO {
@@ -73,9 +73,9 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
-    public List<UserDTO> findAllDTO() {
+    public List<UserSummaryDTO> findAllSummaries() {
         return userRepository.findAll().stream()
-                .map(this::toUserDTO)
+                .map(user -> new UserSummaryDTO(user.getUserId(), user.getUsername(), user.getName()))
                 .collect(Collectors.toList());
     }
 
@@ -84,6 +84,13 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
         return toUserDTO(user);
+    }
+    
+    @Override
+    public UserSummaryDTO findSummaryByIdDTO(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        return new UserSummaryDTO(user.getUserId(), user.getUsername(), user.getName());
     }
 
     @Override
@@ -100,7 +107,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
         user.setVerified(verified);
         if (verified) {
-            user.setVerifiedAt(Instant.now()); // ALTERADO
+            user.setVerifiedAt(Instant.now());
         } else {
             user.setVerifiedAt(null);
         }

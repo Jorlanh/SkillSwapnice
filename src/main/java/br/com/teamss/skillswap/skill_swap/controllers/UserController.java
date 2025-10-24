@@ -1,10 +1,10 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
 import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.services.UserService;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,13 +24,13 @@ public class UserController {
     }
 
     @GetMapping
-    public List<UserDTO> getAllUsers() {
-        return userServiceDTO.findAllDTO();
+    public List<UserSummaryDTO> getAllUsers() {
+        return userServiceDTO.findAllSummaries();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable UUID id) {
-        return ResponseEntity.ok(userServiceDTO.findByIdDTO(id));
+    public ResponseEntity<UserSummaryDTO> getUserById(@PathVariable UUID id) {
+        return ResponseEntity.ok(userServiceDTO.findSummaryByIdDTO(id));
     }
 
     @PostMapping

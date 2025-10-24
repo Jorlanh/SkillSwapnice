@@ -1,6 +1,7 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
 import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
+import br.com.teamss.skillswap.skill_swap.dto.ProposalResponseDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Proposal;
 import br.com.teamss.skillswap.skill_swap.model.services.ProposalService;
 import jakarta.validation.Valid;
@@ -9,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID; // Importar UUID
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/proposal")
@@ -25,9 +26,8 @@ public class ProposalController {
     }
 
     @GetMapping("/user/{userId}")
-    // CORRIGIDO: O tipo do @PathVariable foi alterado de Long para UUID.
-    public ResponseEntity<List<Proposal>> getUserProposals(@PathVariable UUID userId) {
-        List<Proposal> proposals = proposalService.getUserProposals(userId);
+    public ResponseEntity<List<ProposalResponseDTO>> getUserProposals(@PathVariable UUID userId) {
+        List<ProposalResponseDTO> proposals = proposalService.getUserProposals(userId);
         return ResponseEntity.ok(proposals);
     }
 

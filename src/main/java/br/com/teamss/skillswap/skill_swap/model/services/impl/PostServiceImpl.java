@@ -1,5 +1,8 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
+import br.com.teamss.skillswap.skill_swap.dto.LikeDTO;
+import br.com.teamss.skillswap.skill_swap.dto.PostResponseDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.*;
 import br.com.teamss.skillswap.skill_swap.model.repositories.*;
 import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
@@ -24,6 +27,7 @@ public class PostServiceImpl implements PostService {
     private final LikeRepository likeRepository;
     private final RepostRepository repostRepository;
     private final ShareLinkRepository shareLinkRepository;
+    private final CommentRepository commentRepository;
 
     @Autowired
     private FileUploadService fileUploadService;
@@ -31,13 +35,15 @@ public class PostServiceImpl implements PostService {
     @Autowired
     public PostServiceImpl(PostRepository postRepository, UserRepository userRepository,
                            NotificationService notificationService, LikeRepository likeRepository,
-                           RepostRepository repostRepository, ShareLinkRepository shareLinkRepository) {
+                           RepostRepository repostRepository, ShareLinkRepository shareLinkRepository,
+                           CommentRepository commentRepository) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.likeRepository = likeRepository;
         this.repostRepository = repostRepository;
         this.shareLinkRepository = shareLinkRepository;
+        this.commentRepository = commentRepository;
     }
 
     @Override
@@ -118,17 +124,26 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
+    @Transactional
     public Post commentOnPost(Long postId, UUID userId, String content) {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        
+        Comment newComment = new Comment();
+        newComment.setPost(post);
+        newComment.setUser(user);
+        newComment.setContent(content);
+        commentRepository.save(newComment);
 
         post.setCommentsCount(post.getCommentsCount() + 1);
-        post = postRepository.save(post);
+        Post updatedPost = postRepository.save(post);
 
         notificationService.createNotification(post.getUser().getUserId(),
-                "Seu post recebeu um comentário de " + userRepository.findById(userId).get().getUsername());
+                "Seu post recebeu um comentário de " + user.getUsername());
 
-        return post;
+        return updatedPost;
     }
 
     @Override
@@ -153,33 +168,54 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public List<Post> getPosts(String sortBy, Instant startTime) {
+    public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
         List<Post> posts = postRepository.findTrendingPosts(startTime);
+        
+        // A lógica de ordenação precisa ser aplicada antes da conversão para DTO
         switch (sortBy.toUpperCase()) {
             case "LIKES":
-                return posts.stream()
-                        .sorted(Comparator.comparingInt(Post::getLikesCount).reversed())
-                        .collect(Collectors.toList());
+                posts.sort(Comparator.comparingInt(Post::getLikesCount).reversed());
+                break;
             case "REPOSTS":
-                return posts.stream()
-                        .sorted(Comparator.comparingInt(Post::getRepostsCount).reversed())
-                        .collect(Collectors.toList());
+                posts.sort(Comparator.comparingInt(Post::getRepostsCount).reversed());
+                break;
             case "COMMENTS":
-                return posts.stream()
-                        .sorted(Comparator.comparingInt(Post::getCommentsCount).reversed())
-                        .collect(Collectors.toList());
+                posts.sort(Comparator.comparingInt(Post::getCommentsCount).reversed());
+                break;
             case "SHARES":
-                return posts.stream()
-                        .sorted(Comparator.comparingInt(Post::getSharesCount).reversed())
-                        .collect(Collectors.toList());
+                posts.sort(Comparator.comparingInt(Post::getSharesCount).reversed());
+                break;
             case "DATE":
-                return posts.stream()
-                        .sorted(Comparator.comparing(Post::getCreatedAt).reversed())
-                        .collect(Collectors.toList());
+                posts.sort(Comparator.comparing(Post::getCreatedAt).reversed());
+                break;
             case "TRENDING":
             default:
-                return posts;
+                // A query já retorna ordenado por trending
+                break;
         }
+
+        // Converte a lista de Post para PostResponseDTO
+        return posts.stream().map(post -> {
+            PostResponseDTO dto = new PostResponseDTO();
+            UserSummaryDTO userSummary = new UserSummaryDTO(
+                post.getUser().getUserId(),
+                post.getUser().getUsername(),
+                post.getUser().getName()
+            );
+            dto.setPostId(post.getPostId());
+            dto.setTitle(post.getTitle());
+            dto.setContent(post.getContent());
+            dto.setUser(userSummary);
+            dto.setImageUrl(post.getImageUrl());
+            dto.setVideoUrl(post.getVideoUrl());
+            dto.setCreatedAt(post.getCreatedAt());
+            dto.setLikesCount(post.getLikesCount());
+            dto.setCommentsCount(post.getCommentsCount());
+            dto.setRepostsCount(post.getRepostsCount());
+            dto.setSharesCount(post.getSharesCount());
+            dto.setViewsCount(post.getViewsCount());
+            return dto;
+        }).collect(Collectors.toList());
     }
 
     @Override
@@ -226,5 +262,17 @@ public class PostServiceImpl implements PostService {
                 .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
         post.setViewsCount(post.getViewsCount() + 1);
         postRepository.save(post);
+    }
+    
+    @Override
+    public List<LikeDTO> getLikesByPost(Long postId) {
+        List<Like> likes = likeRepository.findAllByPost_PostId(postId);
+        return likes.stream()
+                .map(like -> {
+                    User user = like.getUser();
+                    UserSummaryDTO userSummary = new UserSummaryDTO(user.getUserId(), user.getUsername(), user.getName());
+                    return new LikeDTO(userSummary, like.getCreatedAt());
+                })
+                .collect(Collectors.toList());
     }
 }

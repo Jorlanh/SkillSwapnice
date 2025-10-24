@@ -1,5 +1,6 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
+import br.com.teamss.skillswap.skill_swap.dto.NotificationDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class NotificationServiceImpl implements NotificationService {
@@ -25,8 +27,16 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public List<Notification> getUnreadNotifications(UUID userId) {
-        return notificationRepository.findByUserUserIdAndReadFalse(userId);
+    public List<NotificationDTO> getUnreadNotifications(UUID userId) {
+        List<Notification> notifications = notificationRepository.findByUserUserIdAndReadFalse(userId);
+        return notifications.stream()
+                .map(notification -> new NotificationDTO(
+                        notification.getNotificationId(),
+                        notification.getMessage(),
+                        notification.getSentAt(),
+                        notification.isRead()
+                ))
+                .collect(Collectors.toList());
     }
 
     @Override
