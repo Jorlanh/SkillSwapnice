@@ -44,6 +44,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
+        <!-- ADICIONADO: Dependência Spring Boot Starter Mail -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
@@ -60,6 +61,12 @@
         <dependency>
             <groupId>com.cloudinary</groupId>
             <artifactId>cloudinary-core</artifactId>
+            <version>2.3.2</version>
+        </dependency>
+        <!-- ADICIONADO: Adaptador HTTP5 do Cloudinary -->
+        <dependency>
+            <groupId>com.cloudinary</groupId>
+            <artifactId>cloudinary-http5</artifactId>
             <version>2.3.2</version>
         </dependency>
         
@@ -153,11 +160,13 @@
         </dependency>
 
         <!-- SendGrid & Twilio -->
+        <!-- REMOVIDO: Dependência SendGrid
         <dependency>
             <groupId>com.sendgrid</groupId>
             <artifactId>sendgrid-java</artifactId>
-            <version>4.10.1</version> <!-- Verifique a versão mais recente -->
+            <version>4.10.1</version>
         </dependency>
+        -->
         <dependency>
             <groupId>com.twilio.sdk</groupId>
             <artifactId>twilio</artifactId>

@@ -1,16 +1,12 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
 import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
-import com.sendgrid.Method;
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.SimpleMailMessage; // Importação do SimpleMailMessage
+import org.springframework.mail.javamail.JavaMailSender; // Importação do JavaMailSender
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -21,11 +17,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Service
 public class EmailServiceImpl implements EmailService {
 
-    @Value("${sendgrid.api.key}")
-    private String sendGridApiKey;
+    // Utiliza o JavaMailSender injetado pelo Spring
+    @Autowired
+    private JavaMailSender mailSender;
 
-    @Value("${sendgrid.from.email}") 
-    private String sendgridFromEmail;
+    // Obtém o email remetente configurado no application.properties (spring.mail.username)
+    @Value("${spring.mail.username}") 
+    private String mailFrom;
 
     @Value("${twilio.account.sid}")
     private String twilioAccountSid;
@@ -42,26 +40,21 @@ public class EmailServiceImpl implements EmailService {
         this.sessions = sessions;
     }
 
+    // Método de envio de notificação usando Spring Mail
     @Override
     public void sendNotification(String to, String subject, String body) {
-        // CORREÇÃO: Usando a propriedade injetada
-        Email from = new Email(sendgridFromEmail); 
-        Email toEmail = new Email(to);
-        Content content = new Content("text/plain", body);
-        Mail mail = new Mail(from, subject, toEmail, content);
-        SendGrid sg = new SendGrid(sendGridApiKey);
-        Request request = new Request();
-        
         try {
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            Response response = sg.api(request);
-            if (response.getStatusCode() >= 400) {
-                throw new RuntimeException("Failed to send email: " + response.getBody());
-            }
-        } catch (IOException ex) {
-            throw new RuntimeException("Error sending email: " + ex.getMessage());
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(mailFrom);
+            message.setTo(to);
+            message.setSubject(subject);
+            message.setText(body);
+
+            mailSender.send(message);
+        } catch (Exception ex) {
+            // Lança RuntimeException para que o Controller capture e retorne um erro 500/400
+            // Se a senha do App Password estiver errada, o erro virá daqui.
+            throw new RuntimeException("Falha ao enviar email via Spring Mail: " + ex.getMessage(), ex);
         }
     }
 

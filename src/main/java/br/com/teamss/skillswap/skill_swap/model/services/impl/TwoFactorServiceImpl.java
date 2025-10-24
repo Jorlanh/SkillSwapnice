@@ -2,7 +2,7 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.time.Instant; // ALTERADO
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
@@ -21,13 +21,7 @@ import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
 import com.google.zxing.qrcode.QRCodeWriter;
-import com.sendgrid.Method;
-import com.sendgrid.Request;
-import com.sendgrid.Response;
-import com.sendgrid.SendGrid;
-import com.sendgrid.helpers.mail.Mail;
-import com.sendgrid.helpers.mail.objects.Content;
-import com.sendgrid.helpers.mail.objects.Email;
+// REMOVIDO: Importações do SendGrid (Method, Request, Response, SendGrid, Mail, Content, Email)
 import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
 import com.twilio.type.PhoneNumber;
@@ -38,6 +32,7 @@ import br.com.teamss.skillswap.skill_swap.model.entities.TwoFactorConfig;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.TwoFactorConfigRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
+import br.com.teamss.skillswap.skill_swap.model.services.EmailService; // ADICIONADO: EmailService
 import br.com.teamss.skillswap.skill_swap.model.services.TwoFactorService;
 import jakarta.annotation.PostConstruct;
 
@@ -52,6 +47,9 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     @Autowired
     private TwoFactorConfigRepository twoFactorConfigRepository;
 
+    @Autowired // ADICIONADO: Injeção do EmailService
+    private EmailService emailService;
+
     @Value("${twilio.account.sid}")
     private String twilioAccountSid;
 
@@ -61,17 +59,14 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     @Value("${twilio.phone.number}")
     private String twilioPhoneNumber;
 
-    @Value("${sendgrid.api.key}")
-    private String sendgridApiKey;
-
-    @Value("${sendgrid.from.email}")
-    private String sendgridFromEmail;
+    // REMOVIDO: Variáveis do SendGrid
 
     private final GoogleAuthenticator googleAuthenticator = new GoogleAuthenticator();
 
     @PostConstruct
     public void initTwilio() {
         try {
+            // Inicialização do Twilio mantida, pois não depende do SendGrid
             Twilio.init(twilioAccountSid, twilioAuthToken);
             logger.info("Twilio inicializado com Account SID: {}", twilioAccountSid);
         } catch (Exception e) {
@@ -119,9 +114,10 @@ public class TwoFactorServiceImpl implements TwoFactorService {
                 logger.error("E-mail inválido ou ausente para usuário {}: {}", userId, email);
                 throw new RuntimeException("E-mail inválido ou não configurado para o usuário");
             }
-            sendEmail(email, code, userId);
+            // ALTERADO: Uso do novo EmailService
+            emailService.sendVerificationCode(email, code);
             user.setVerificationCode(code);
-            user.setVerificationCodeExpiry(Instant.now().plus(10, ChronoUnit.MINUTES)); // ALTERADO
+            user.setVerificationCodeExpiry(Instant.now().plus(10, ChronoUnit.MINUTES));
             userRepository.save(user);
             logger.info("Gerado código de verificação por e-mail para usuário {}", userId);
             return code;
@@ -134,7 +130,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
             }
             sendSMS(phoneNumber, code, userId);
             user.setVerificationCode(code);
-            user.setVerificationCodeExpiry(Instant.now().plus(10, ChronoUnit.MINUTES)); // ALTERADO
+            user.setVerificationCodeExpiry(Instant.now().plus(10, ChronoUnit.MINUTES));
             userRepository.save(user);
             logger.info("Gerado código de verificação por SMS para usuário {}", userId);
             return code;
@@ -177,7 +173,7 @@ public class TwoFactorServiceImpl implements TwoFactorService {
                 logger.warn("Código de verificação ou expiração não definidos para usuário {} e método {}", userId, method);
                 return false;
             }
-            Instant expiryInstant = user.getVerificationCodeExpiry(); // ALTERADO
+            Instant expiryInstant = user.getVerificationCodeExpiry();
             if (Instant.now().isAfter(expiryInstant)) {
                 logger.warn("Código expirado para usuário {} e método {}", userId, method);
                 return false;
@@ -238,43 +234,17 @@ public class TwoFactorServiceImpl implements TwoFactorService {
     }
 
     @Override
+    // REMOVIDO: Lógica SendGrid, o EmailService faz a chamada
     public void sendEmail(String to, String code, UUID userId) {
-        SendGrid sg = new SendGrid(sendgridApiKey);
-        Email from = new Email(sendgridFromEmail);
-        Email toEmail = new Email(to);
-        String subject = "Código de Verificação SkillSwap";
-        Content content = new Content("text/html",
-                "<p>Olá,</p>" +
-                        "<p>Seu código de verificação para o SkillSwap é: <strong>" + code + "</strong></p>" +
-                        "<p>Este código é válido por 10 minutos.</p>" +
-                        "<p>Se você não solicitou este código, ignore este e-mail.</p>" +
-                        "<p>Atenciosamente,<br>Equipe SkillSwap</p>"
-        );
-        Mail mail = new Mail(from, subject, toEmail, content);
-
-        Request request = new Request();
-        try {
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            // Envia a requisição para o SendGrid
-            Response response = sg.api(request);
-            logger.info("E-mail enviado para {} para usuário {}. Status: {}", to, userId, response.getStatusCode());
-            if (response.getStatusCode() >= 400) {
-                logger.error("Falha ao enviar e-mail para {} para usuário {}. Status: {}, Resposta: {}",
-                        to, userId, response.getStatusCode(), response.getBody());
-                throw new RuntimeException("Falha ao enviar e-mail: Status " + response.getStatusCode());
-            }
-        } catch (IOException e) {
-            logger.error("Erro ao enviar e-mail para {} para usuário {}: {}", to, userId, e.getMessage(), e);
-            throw new RuntimeException("Falha ao enviar e-mail", e);
-        }
+        // Delega para o EmailService
+        emailService.sendVerificationCode(to, code);
     }
 
     private String normalizePhoneNumber(String phone) {
         if (phone == null) return null;
         phone = phone.replaceAll("[^0-9+]", "");
         if (!phone.startsWith("+")) {
+            // Assumindo prefixo internacional +1 para simplificação, ajuste se necessário para +55 ou outro
             phone = "+1" + phone;
         }
         if (!phone.matches("\\+\\d{10,15}")) {

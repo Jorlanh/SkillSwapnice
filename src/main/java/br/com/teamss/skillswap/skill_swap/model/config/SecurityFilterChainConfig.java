@@ -73,18 +73,23 @@ public class SecurityFilterChainConfig {
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos (não precisam de autenticação)
                 .requestMatchers(
-                    // AntPathRequestMatcher.antMatcher("/h2-console/**"), // Removido daqui, tratado pelo perfil 'dev'
+                    // Rotas de Autenticação/Registro (POST)
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/login"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/register"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/verify"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/password-reset/**"),
+
+                    // Rotas de Verificação/Reset de Senha (TODOS os métodos, que são POSTs)
+                    AntPathRequestMatcher.antMatcher("/api/verify"),
+                    AntPathRequestMatcher.antMatcher("/api/password-reset/**"),
+
+                    // Rotas de Acesso Público (GET)
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/**"),
-                    // Endpoints WebSocket geralmente precisam de tratamento especial, mas permitir por agora
+                    
+                    // WebSockets
                     AntPathRequestMatcher.antMatcher("/video-call/**"),
-                    AntPathRequestMatcher.antMatcher("/ws/**") // Exemplo genérico para WebSocket
+                    AntPathRequestMatcher.antMatcher("/ws/**")
                 ).permitAll()
 
                 // Qualquer outra requisição precisa de autenticação
@@ -93,7 +98,6 @@ public class SecurityFilterChainConfig {
 
             // Adiciona o filtro de autenticação JWT antes do filtro padrão de usuário/senha
             .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
-            // .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())); // Removido daqui, tratado pelo perfil 'dev' para H2
 
         return http.build();
     }
