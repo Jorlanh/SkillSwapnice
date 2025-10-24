@@ -170,8 +170,7 @@ public class PostServiceImpl implements PostService {
     @Override
     public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
         List<Post> posts = postRepository.findTrendingPosts(startTime);
-        
-        // A lógica de ordenação precisa ser aplicada antes da conversão para DTO
+
         switch (sortBy.toUpperCase()) {
             case "LIKES":
                 posts.sort(Comparator.comparingInt(Post::getLikesCount).reversed());
@@ -190,11 +189,9 @@ public class PostServiceImpl implements PostService {
                 break;
             case "TRENDING":
             default:
-                // A query já retorna ordenado por trending
                 break;
         }
 
-        // Converte a lista de Post para PostResponseDTO
         return posts.stream().map(post -> {
             PostResponseDTO dto = new PostResponseDTO();
             UserSummaryDTO userSummary = new UserSummaryDTO(
