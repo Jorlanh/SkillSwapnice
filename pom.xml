@@ -5,9 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version> <!-- Atualize para a versão mais recente compatível -->
-        <relativePath/> <!-- lookup parent from repository -->
-    </parent>
+        <version>3.4.5</version> <relativePath/> </parent>
     <groupId>br.com.teamss.skillswap</groupId>
     <artifactId>skill-swap</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -15,8 +13,7 @@
     <description>Demo project for Spring Boot</description>
     <properties>
         <java.version>21</java.version>
-        <bucket4j.version>8.10.0</bucket4j.version> <!-- Adicione a versão do Bucket4j -->
-    </properties>
+        <bucket4j.version>8.10.0</bucket4j.version> </properties>
     <dependencies>
 
         <dependency>
@@ -44,39 +41,33 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
-        <!-- ADICIONADO: Dependência Spring Boot Starter Mail -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/io.micrometer/micrometer-core -->
         <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.cloudinary/cloudinary-core -->
         <dependency>
             <groupId>com.cloudinary</groupId>
             <artifactId>cloudinary-core</artifactId>
             <version>2.3.2</version>
         </dependency>
-        <!-- ADICIONADO: Adaptador HTTP5 do Cloudinary -->
         <dependency>
             <groupId>com.cloudinary</groupId>
             <artifactId>cloudinary-http5</artifactId>
             <version>2.3.2</version>
         </dependency>
         
-        <!-- Rate Limiting com Bucket4j -->
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j_jdk8-core</artifactId>
             <version>8.10.1</version>
         </dependency>
-        <!-- Cache para Bucket4j (Exemplo com Caffeine, pode usar JCache, Hazelcast, etc.) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-cache</artifactId>
@@ -86,16 +77,6 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-        <!-- Banco de Dados -->
-        <!-- H2 (Comentado - Não será usado como padrão) -->
-        <!--
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
-        </dependency>
-         -->
-        <!-- PostgreSQL (Adicionado/Descomentado) -->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
@@ -103,7 +84,6 @@
         </dependency>
 
 
-        <!-- JWT -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -122,7 +102,6 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Google Authenticator, ZXing, Google Calendar -->
         <dependency>
             <groupId>com.warrenstrange</groupId>
             <artifactId>googleauth</artifactId>
@@ -141,39 +120,24 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>2.0.0</version> <!-- Verifique a versão mais recente -->
-        </dependency>
+            <version>2.0.0</version> </dependency>
         <dependency>
             <groupId>com.google.oauth-client</groupId>
-            <artifactId>google-oauth-client-jetty</artifactId> <!-- Ou outra implementação -->
-            <version>1.39.0</version> <!-- Verifique a versão mais recente -->
-        </dependency>
+            <artifactId>google-oauth-client-jetty</artifactId> <version>1.39.0</version> </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-calendar</artifactId>
-            <version>v3-rev20250404-2.0.0</version> <!-- Verifique a versão mais recente -->
-        </dependency>
+            <version>v3-rev20250404-2.0.0</version> </dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
-            <version>1.23.0</version> <!-- Verifique a versão mais recente -->
-        </dependency>
+            <version>1.23.0</version> </dependency>
 
-        <!-- SendGrid & Twilio -->
-        <!-- REMOVIDO: Dependência SendGrid
-        <dependency>
-            <groupId>com.sendgrid</groupId>
-            <artifactId>sendgrid-java</artifactId>
-            <version>4.10.1</version>
-        </dependency>
-        -->
         <dependency>
             <groupId>com.twilio.sdk</groupId>
             <artifactId>twilio</artifactId>
-            <version>10.9.0</version> <!-- Verifique a versão mais recente -->
-        </dependency>
+            <version>10.9.0</version> </dependency>
 
-        <!-- Utilitários -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -182,10 +146,8 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>1.6.3</version> <!-- Use uma versão estável e compatível -->
-        </dependency>
+            <version>1.6.3</version> </dependency>
 
-        <!-- Testes -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -197,7 +159,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Jakarta Annotations (necessário para @PostConstruct, etc. em Java 9+) -->
         <dependency>
             <groupId>jakarta.annotation</groupId>
             <artifactId>jakarta.annotation-api</artifactId>
@@ -209,24 +170,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version> <!-- Use uma versão recente -->
-                <configuration>
+                <version>3.11.0</version> <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version> <!-- Use a propriedade definida -->
-                        </path>
+                            <version>${lombok.version}</version> </path>
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
-                            <version>1.6.3</version> <!-- Use a mesma versão da dependência -->
-                        </path>
+                            <version>1.6.3</version> </path>
                          <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version> <!-- Se usar Lombok com MapStruct -->
-                        </path>
+                            <version>0.2.0</version> </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
@@ -242,18 +199,44 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.owasp</groupId>
+                <artifactId>dependency-check-maven</artifactId>
+                <version>9.0.9</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <failBuildOnCVSS>7</failBuildOnCVSS>
+                    <format>ALL</format>
+                    <scanSet>
+                        <fileSet>
+                            <directory>./</directory>
+                            <includes>
+                                <include>**/*.jar</include>
+                                <include>**/*.js</include>
+                            </includes>
+                            <excludes>
+                                <exclude>**/target/**</exclude>
+                            </excludes>
+                        </fileSet>
+                    </scanSet>
+                </configuration>
+            </plugin>
         </plugins>
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering> <!-- Mantém o filtering se necessário -->
-                <includes>
+                <filtering>true</filtering> <includes>
                     <include>**/*.properties</include>
                     <include>**/*.xml</include>
                     <include>**/*.json</include>
                     <include>**/*.sql</include>
-                    <include>**/geoip/*.mmdb</include> <!-- Exemplo, ajuste conforme necessário -->
-                </includes>
+                    <include>**/geoip/*.mmdb</include> </includes>
             </resource>
         </resources>
     </build>
