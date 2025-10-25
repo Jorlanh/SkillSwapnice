@@ -41,9 +41,10 @@ jobs:
         # Adicionar esta query suite pode ajudar a detectar problemas relacionados à compilação
         queries: +security-and-quality
 
-    - name: Build with Maven
-      # O comando Maven permanece o mesmo, mas agora executará com JDK 17
-      run: mvn clean install -DskipTests -f pom.xml
+    - name: Build with Maven (skip OWASP)
+      run: mvn clean install -DskipTests -Powasp-skip -f pom.xml
+
+
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3

@@ -23,8 +23,11 @@ public class JwtHandshakeInterceptor implements HandshakeInterceptor {
     @Override
     public boolean beforeHandshake(ServerHttpRequest request, ServerHttpResponse response, WebSocketHandler wsHandler,
                                    Map<String, Object> attributes) throws Exception {
-        
-        String token = UriComponentsBuilder.fromHttpRequest(request).build().getQueryParams().getFirst("token");
+        // Corrigido: fromUri() em vez de fromHttpRequest()
+        String token = UriComponentsBuilder.fromUri(request.getURI())
+                                           .build()
+                                           .getQueryParams()
+                                           .getFirst("token");
 
         if (token == null || token.trim().isEmpty()) {
             return false; // Rejeita a conexão se não houver token
