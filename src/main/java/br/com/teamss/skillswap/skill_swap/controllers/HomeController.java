@@ -11,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -39,7 +38,17 @@ public class HomeController {
         this.commentService = commentService;
         this.userServiceDTO = userServiceDTO;
     }
+    
+    // ... (outros métodos do controller)
 
+    @PostMapping("/notifications/{notificationId}/read")
+    public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long notificationId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser(); // Obtém usuário autenticado
+        notificationService.markAsRead(notificationId, authenticatedUser.getUserId()); // Passa o ID do usuário
+        return ResponseEntity.ok().build();
+    }
+    
+    // ... (restante dos métodos do controller)
     @PostMapping("/posts")
     public ResponseEntity<Post> createPost(
             @RequestParam String title,
@@ -81,12 +90,10 @@ public class HomeController {
         return ResponseEntity.ok(communityService.joinCommunity(communityId, authenticatedUser.getUserId()));
     }
     
-    // AQUI ESTÁ A ALTERAÇÃO: MÉTODO getPosts MODIFICADO
     @GetMapping("/posts")
     public ResponseEntity<List<PostResponseDTO>> getPosts(
             @RequestParam(defaultValue = "TRENDING") String sortBy,
             @RequestParam(defaultValue = "DAY") String period) {
-        // A lógica do 'switch' foi removida daqui
         List<PostResponseDTO> posts = postService.getPosts(sortBy, period);
         posts.forEach(post -> postService.incrementViewCount(post.getPostId()));
         return ResponseEntity.ok(posts);
@@ -105,12 +112,6 @@ public class HomeController {
     @GetMapping("/communities")
     public ResponseEntity<List<Community>> getCommunities(@RequestParam(defaultValue = "5") int limit) {
         return ResponseEntity.ok(communityService.getCommunities(limit));
-    }
-
-    @PostMapping("/notifications/{notificationId}/read")
-    public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long notificationId) {
-        notificationService.markAsRead(notificationId);
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/share/click")

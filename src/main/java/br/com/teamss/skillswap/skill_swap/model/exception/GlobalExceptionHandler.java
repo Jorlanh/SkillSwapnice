@@ -1,15 +1,24 @@
 package br.com.teamss.skillswap.skill_swap.model.exception;
 
+import br.com.teamss.skillswap.skill_swap.model.services.SecurityAuditService;
 import jakarta.persistence.EntityNotFoundException;
-import java.net.URI;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
+import java.net.URI;
+
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @Autowired
+    private SecurityAuditService auditService;
 
     @ExceptionHandler(NoResourceFoundException.class)
     public ProblemDetail handleNoResourceFound(NoResourceFoundException ex) {
@@ -40,6 +49,19 @@ public class GlobalExceptionHandler {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
         problem.setTitle("Requisição Inválida");
         problem.setType(URI.create("urn:problem-type:bad-request"));
+        return problem;
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ProblemDetail handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
+        String username = (SecurityContextHolder.getContext().getAuthentication() != null) ?
+                          SecurityContextHolder.getContext().getAuthentication().getName() : "ANONYMOUS";
+        
+        auditService.logAccessDenied(username, request.getRequestURI(), request);
+        
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
+        problem.setTitle("Acesso Negado");
+        problem.setType(URI.create("urn:problem-type:forbidden"));
         return problem;
     }
 }

@@ -7,6 +7,7 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationReposit
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException; // IMPORTADO
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,9 +41,15 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void markAsRead(Long notificationId) {
+    public void markAsRead(Long notificationId, UUID userId) { // Assinatura alterada
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notificação não encontrada!"));
+
+        // VERIFICAÇÃO DE SEGURANÇA ADICIONADA
+        if (!notification.getUser().getUserId().equals(userId)) {
+            throw new AccessDeniedException("Você não tem permissão para marcar esta notificação como lida.");
+        }
+
         notification.setRead(true);
         notificationRepository.save(notification);
     }

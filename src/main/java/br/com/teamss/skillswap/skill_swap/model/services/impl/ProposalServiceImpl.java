@@ -2,6 +2,7 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
 import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
 import br.com.teamss.skillswap.skill_swap.dto.ProposalResponseDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.Proposal;
@@ -13,8 +14,10 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.SkillRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
 import br.com.teamss.skillswap.skill_swap.model.services.ProposalService;
+import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO; // IMPORTADO
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException; // IMPORTADO
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -40,8 +43,12 @@ public class ProposalServiceImpl implements ProposalService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired // ADICIONADO
+    private UserServiceDTO userServiceDTO;
+
     @Override
     public Proposal sendProposal(ProposalRequestDTO proposalRequest) {
+        // ... (código existente inalterado)
         User sender = userRepository.findById(proposalRequest.getSenderId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário remetente não encontrado"));
         
@@ -77,6 +84,7 @@ public class ProposalServiceImpl implements ProposalService {
 
     @Override
     public List<ProposalResponseDTO> getUserProposals(UUID userId) {
+        // ... (código existente inalterado)
         List<Proposal> proposals = proposalRepository.findBySenderIdOrReceiverId(userId);
         
         return proposals.stream().map(proposal -> {
@@ -93,10 +101,17 @@ public class ProposalServiceImpl implements ProposalService {
         }).collect(Collectors.toList());
     }
 
+    // MÉTODO MODIFICADO
     @Override
     public Proposal acceptProposal(Long proposalId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
+
+        // VERIFICAÇÃO DE SEGURANÇA ADICIONADA
+        if (!proposal.getReceiver().getUserId().equals(authenticatedUser.getUserId())) {
+            throw new AccessDeniedException("Você não tem permissão para aceitar esta proposta.");
+        }
 
         if (!proposal.getStatus().equals("PENDING")) {
             throw new IllegalStateException("A proposta não está mais pendente");
@@ -123,10 +138,17 @@ public class ProposalServiceImpl implements ProposalService {
         return updatedProposal;
     }
 
+    // MÉTODO MODIFICADO
     @Override
     public Proposal rejectProposal(Long proposalId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
+
+        // VERIFICAÇÃO DE SEGURANÇA ADICIONADA
+        if (!proposal.getReceiver().getUserId().equals(authenticatedUser.getUserId())) {
+            throw new AccessDeniedException("Você não tem permissão para rejeitar esta proposta.");
+        }
 
         if (!proposal.getStatus().equals("PENDING")) {
             throw new IllegalStateException("A proposta não está mais pendente");
@@ -151,10 +173,17 @@ public class ProposalServiceImpl implements ProposalService {
         return updatedProposal;
     }
 
+    // MÉTODO MODIFICADO
     @Override
     public Proposal blockProposal(Long proposalId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new RuntimeException("Proposta não encontrada"));
+
+        // VERIFICAÇÃO DE SEGURANÇA ADICIONADA
+        if (!proposal.getReceiver().getUserId().equals(authenticatedUser.getUserId())) {
+            throw new AccessDeniedException("Você não tem permissão para bloquear esta proposta.");
+        }
 
         if (!proposal.getStatus().equals("PENDING")) {
             throw new IllegalStateException("A proposta não está mais pendente");

@@ -6,6 +6,8 @@ import br.com.teamss.skillswap.skill_swap.dto.PasswordResetRequestDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PasswordResetVerifyDTO;
 import br.com.teamss.skillswap.skill_swap.dto.SuccessResponse;
 import br.com.teamss.skillswap.skill_swap.model.services.PasswordResetService;
+import br.com.teamss.skillswap.skill_swap.model.services.SecurityAuditService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +18,10 @@ public class PasswordResetController {
 
     @Autowired
     private PasswordResetService passwordResetService;
+    
+    @Autowired
+    private SecurityAuditService auditService;
 
-    // Endpoint para enviar o código de verificação
     @PostMapping("/request")
     public ResponseEntity<?> requestPasswordReset(@RequestBody PasswordResetRequestDTO requestDTO) {
         try {
@@ -28,7 +32,6 @@ public class PasswordResetController {
         }
     }
 
-    // Endpoint para verificar o código
     @PostMapping("/verify")
     public ResponseEntity<?> verifyResetCode(@RequestBody PasswordResetVerifyDTO verifyDTO) {
         boolean isValid = passwordResetService.verifyResetCode(verifyDTO.getEmail(), verifyDTO.getCode());
@@ -38,13 +41,14 @@ public class PasswordResetController {
         return ResponseEntity.ok(new SuccessResponse("Código verificado com sucesso."));
     }
 
-    // Endpoint para alterar a senha
     @PostMapping("/reset")
-    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetDTO resetDTO) {
+    public ResponseEntity<?> resetPassword(@RequestBody PasswordResetDTO resetDTO, HttpServletRequest request) {
         try {
             passwordResetService.resetPassword(resetDTO.getEmail(), resetDTO.getNewPassword(), resetDTO.getConfirmPassword());
+            auditService.logPasswordChangeSuccess(resetDTO.getEmail(), request);
             return ResponseEntity.ok(new SuccessResponse("Senha alterada com sucesso."));
         } catch (IllegalArgumentException | IllegalStateException e) {
+            auditService.logPasswordChangeFailure(resetDTO.getEmail(), e.getMessage(), request);
             return ResponseEntity.badRequest().body(new ErrorResponse(e.getMessage()));
         }
     }
