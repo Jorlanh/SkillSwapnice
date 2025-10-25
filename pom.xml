@@ -4,9 +4,9 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-parent</artifactId>
-            <version>4.0.0-M2</version>
-            <type>pom</type>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.7</version>
+        <type>pom</type>
         <relativePath/>
     </parent>
     <groupId>br.com.teamss.skillswap</groupId>
