@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.1</version> <!-- VERSÃO ESTÁVEL -->
+        <version>3.3.1</version>
         <relativePath/>
     </parent>
     <groupId>br.com.teamss.skillswap</groupId>
@@ -14,12 +14,14 @@
     <name>skill-swap</name>
     <description>Demo project for Spring Boot</description>
     <properties>
-        <java.version>25</java.version> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
+        <java.version>17</java.version>
         <bucket4j.version>8.10.0</bucket4j.version>
         <lombok.version>1.18.34</lombok.version>
+        <!-- Propriedade para a versão do toolchains plugin -->
+        <maven-toolchains-plugin.version>3.1.0</maven-toolchains-plugin.version>
     </properties>
     <dependencies>
-
+        <!-- SUAS DEPENDÊNCIAS CONTINUAM AQUI... -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
@@ -182,16 +184,35 @@
         </dependency>
     </dependencies>
 
-    <!-- SEÇÃO BUILD COM VERSÕES ESTÁVEIS E JAVA 17 -->
     <build>
         <plugins>
+            <!-- PLUGIN TOOLCHAINS ADICIONADO -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-toolchains-plugin</artifactId>
+                <version>${maven-toolchains-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>toolchain</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <toolchains>
+                        <jdk>
+                            <version>${java.version}</version>
+                        </jdk>
+                    </toolchains>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version> <!-- VERSÃO ESTÁVEL -->
+                <version>3.13.0</version>
                 <configuration>
-                    <source>25</source> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
-                    <target>25</target> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
