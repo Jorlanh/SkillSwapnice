@@ -3,21 +3,35 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 import br.com.teamss.skillswap.skill_swap.dto.LikeDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PostResponseDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
-import br.com.teamss.skillswap.skill_swap.model.entities.*;
-import br.com.teamss.skillswap.skill_swap.model.repositories.*;
+import br.com.teamss.skillswap.skill_swap.model.entities.Comment;
+import br.com.teamss.skillswap.skill_swap.model.entities.Like;
+import br.com.teamss.skillswap.skill_swap.model.entities.Post;
+import br.com.teamss.skillswap.skill_swap.model.entities.Repost;
+import br.com.teamss.skillswap.skill_swap.model.entities.ShareLink;
+import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.repositories.CommentRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.LikeRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.PostRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.RepostRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.ShareLinkRepository;
+import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
 import br.com.teamss.skillswap.skill_swap.model.services.PostService;
+import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -79,15 +93,18 @@ public class PostServiceImpl implements PostService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
-        if (!likeRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
-            Like like = new Like(post, user);
-            likeRepository.save(like);
-            post.setLikesCount(post.getLikesCount() + 1);
-            postRepository.save(post);
-
-            notificationService.createNotification(post.getUser().getUserId(),
-                    "Seu post foi curtido por " + user.getUsername());
+        if (likeRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
+            throw new IllegalStateException("O usuário já curtiu este post.");
         }
+
+        Like like = new Like(post, user);
+        likeRepository.save(like);
+
+        post.setLikesCount(post.getLikesCount() + 1);
+        postRepository.save(post);
+
+        notificationService.createNotification(post.getUser().getUserId(),
+                "Seu post foi curtido por " + user.getUsername());
 
         return post;
     }
@@ -168,10 +185,9 @@ public class PostServiceImpl implements PostService {
         return shareUrl;
     }
 
-    // AQUI ESTÁ A ALTERAÇÃO: MÉTODO getPosts MODIFICADO PARA RECEBER String period
     @Override
     public List<PostResponseDTO> getPosts(String sortBy, String period) {
-        Instant startTime = calculateStartTime(period); // Lógica de cálculo adicionada aqui
+        Instant startTime = calculateStartTime(period);
         List<Post> posts = postRepository.findTrendingPosts(startTime);
 
         switch (sortBy.toUpperCase()) {
@@ -192,7 +208,6 @@ public class PostServiceImpl implements PostService {
                 break;
             case "TRENDING":
             default:
-                // A ordenação padrão já vem do repositório
                 break;
         }
 
@@ -219,15 +234,13 @@ public class PostServiceImpl implements PostService {
         }).collect(Collectors.toList());
     }
     
-    // MÉTODO ANTIGO DEIXADO PARA COMPATIBILIDADE, CASO NECESSÁRIO
     public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
-        // ... implementação anterior
-        return new ArrayList<>(); // Retornando lista vazia para evitar erros de compilação
+        return new ArrayList<>();
     }
 
     @Override
     public List<String> getTrendingTopics(String period) {
-        Instant startTime = calculateStartTime(period); // Reutilizando a nova lógica
+        Instant startTime = calculateStartTime(period);
         List<Post> posts = postRepository.findTrendingPosts(startTime);
         Map<String, Double> topicScores = new HashMap<>();
 
@@ -269,7 +282,6 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toList());
     }
 
-    // AQUI ESTÁ A ADIÇÃO: NOVO MÉTODO PRIVADO
     private Instant calculateStartTime(String period) {
         Instant now = Instant.now();
         switch (period.toUpperCase()) {

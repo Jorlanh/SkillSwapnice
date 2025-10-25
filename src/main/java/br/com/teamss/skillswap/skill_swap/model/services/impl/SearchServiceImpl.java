@@ -7,13 +7,12 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.CommunityRepository
 import br.com.teamss.skillswap.skill_swap.model.repositories.PostRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.SearchService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
 @Service
 public class SearchServiceImpl implements SearchService {
@@ -63,9 +62,8 @@ public class SearchServiceImpl implements SearchService {
             });
         } else if (sortBy.equalsIgnoreCase("DATE")) {
             results.sort((a, b) -> {
-                // ALTERADO: removido .toInstant()
-                Instant timeA = a instanceof Post ? ((Post) a).getCreatedAt() : Instant.now();
-                Instant timeB = b instanceof Post ? ((Post) b).getCreatedAt() : Instant.now();
+                Instant timeA = a instanceof Post ? ((Post) a).getCreatedAt() : Instant.MIN;
+                Instant timeB = b instanceof Post ? ((Post) b).getCreatedAt() : Instant.MIN;
                 return timeB.compareTo(timeA);
             });
         }

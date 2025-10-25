@@ -1,5 +1,6 @@
 package br.com.teamss.skillswap.skill_swap.model.config;
 
+import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +21,6 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -62,14 +61,13 @@ public class SecurityFilterChainConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
-            // INCREMENTADO: Configuração de Cabeçalhos de Segurança
             .headers(headers -> headers
                 .httpStrictTransportSecurity(hsts -> hsts
                     .includeSubDomains(true)
                     .maxAgeInSeconds(31536000)
                 )
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';")
+                    .policyDirectives("default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';")
                 )
                 .frameOptions(frameOptions -> frameOptions
                     .deny()
@@ -81,25 +79,17 @@ public class SecurityFilterChainConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    // Rotas de Autenticação/Registo
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/login"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/register"),
                     AntPathRequestMatcher.antMatcher("/api/verify"),
                     AntPathRequestMatcher.antMatcher("/api/password-reset/**"),
-
-                    // Rotas Públicas (GET)
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
-                    // REGRAS REFINADAS PARA /api/home
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/posts"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-topics"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/communities"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/trending-posts")
-                    
-                    // **CORREÇÃO DE SEGURANÇA: WebSockets não são mais públicos**
-                    // AntPathRequestMatcher.antMatcher("/video-call/**"),
-                    // AntPathRequestMatcher.antMatcher("/ws/**")
                 ).permitAll()
                 .anyRequest().authenticated()
             )

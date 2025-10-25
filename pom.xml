@@ -5,7 +5,9 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version> <relativePath/> </parent>
+        <version>3.4.5</version>
+        <relativePath/>
+    </parent>
     <groupId>br.com.teamss.skillswap</groupId>
     <artifactId>skill-swap</artifactId>
     <version>0.0.1-SNAPSHOT</version>
@@ -13,7 +15,8 @@
     <description>Demo project for Spring Boot</description>
     <properties>
         <java.version>21</java.version>
-        <bucket4j.version>8.10.0</bucket4j.version> </properties>
+        <bucket4j.version>8.10.0</bucket4j.version>
+    </properties>
     <dependencies>
 
         <dependency>
@@ -62,7 +65,7 @@
             <artifactId>cloudinary-http5</artifactId>
             <version>2.3.2</version>
         </dependency>
-        
+
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j_jdk8-core</artifactId>
@@ -120,23 +123,29 @@
         <dependency>
             <groupId>com.google.api-client</groupId>
             <artifactId>google-api-client</artifactId>
-            <version>2.0.0</version> </dependency>
+            <version>2.0.0</version>
+        </dependency>
         <dependency>
             <groupId>com.google.oauth-client</groupId>
-            <artifactId>google-oauth-client-jetty</artifactId> <version>1.39.0</version> </dependency>
+            <artifactId>google-oauth-client-jetty</artifactId>
+            <version>1.39.0</version>
+        </dependency>
         <dependency>
             <groupId>com.google.apis</groupId>
             <artifactId>google-api-services-calendar</artifactId>
-            <version>v3-rev20250404-2.0.0</version> </dependency>
+            <version>v3-rev20250404-2.0.0</version>
+        </dependency>
         <dependency>
             <groupId>com.google.auth</groupId>
             <artifactId>google-auth-library-oauth2-http</artifactId>
-            <version>1.23.0</version> </dependency>
+            <version>1.23.0</version>
+        </dependency>
 
         <dependency>
             <groupId>com.twilio.sdk</groupId>
             <artifactId>twilio</artifactId>
-            <version>10.9.0</version> </dependency>
+            <version>10.9.0</version>
+        </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
@@ -146,7 +155,8 @@
         <dependency>
             <groupId>org.mapstruct</groupId>
             <artifactId>mapstruct</artifactId>
-            <version>1.6.3</version> </dependency>
+            <version>1.6.3</version>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -170,20 +180,24 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version> <configuration>
+                <version>3.11.0</version>
+                <configuration>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version> </path>
+                            <version>${lombok.version}</version>
+                        </path>
                         <path>
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
-                            <version>1.6.3</version> </path>
-                         <path>
+                            <version>1.6.3</version>
+                        </path>
+                        <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok-mapstruct-binding</artifactId>
-                            <version>0.2.0</version> </path>
+                            <version>0.2.0</version>
+                        </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
@@ -231,12 +245,14 @@
         <resources>
             <resource>
                 <directory>src/main/resources</directory>
-                <filtering>true</filtering> <includes>
+                <filtering>true</filtering>
+                <includes>
                     <include>**/*.properties</include>
                     <include>**/*.xml</include>
                     <include>**/*.json</include>
                     <include>**/*.sql</include>
-                    <include>**/geoip/*.mmdb</include> </includes>
+                    <include>**/geoip/*.mmdb</include>
+                </includes>
             </resource>
         </resources>
     </build>

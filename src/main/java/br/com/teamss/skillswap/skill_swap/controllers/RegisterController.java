@@ -10,6 +10,13 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.ProfileRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
 import jakarta.validation.Valid;
+import java.security.SecureRandom;
+import java.sql.Date;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.Optional;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,14 +24,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.sql.Date;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.Optional;
-import java.util.Random;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
@@ -48,12 +47,9 @@ public class RegisterController {
             return ResponseEntity.badRequest().body(new ErrorResponse("As senhas não coincidem."));
         }
 
-        // **ALTERAÇÃO CONFORME SOLICITADO: Verificações explícitas foram reintroduzidas**
-        // Verifica se o e-mail já está registrado e retorna uma mensagem de erro específica.
         if (userRepository.existsByEmail(registerDTO.getEmail())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("E-mail já registrado."));
         }
-        // Verifica se o nome de usuário já está registrado e retorna uma mensagem de erro específica.
         if (userRepository.existsByUsername(registerDTO.getUsername())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Nome de usuário já registrado."));
         }
@@ -77,7 +73,7 @@ public class RegisterController {
         user.setProfile(newProfile);
         newProfile.setUser(user);
 
-        String verificationCode = String.format("%06d", new Random().nextInt(999999));
+        String verificationCode = String.format("%06d", new SecureRandom().nextInt(999999));
         user.setVerificationCode(verificationCode);
         user.setVerificationCodeExpiry(Instant.now().plus(15, ChronoUnit.MINUTES));
 

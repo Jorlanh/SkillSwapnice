@@ -9,13 +9,19 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.UserService;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import jakarta.persistence.EntityNotFoundException;
+import java.util.List;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.UUID;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/users")
@@ -50,7 +56,6 @@ public class UserController {
         return ResponseEntity.ok(userServiceDTO.toUserPrivateProfileDTO(user));
     }
 
-    // ADMIN ONLY
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> createUser(@RequestBody User user) {
@@ -59,7 +64,6 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
 
-    // ADMIN ONLY
     @PostMapping("/{userId}/skills")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> addSkillsToUser(
@@ -70,7 +74,6 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
 
-    // ADMIN ONLY
     @PostMapping("/{userId}/roles")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> addRolesToUser(
@@ -81,9 +84,8 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
     
-    // SECURED: A user can update their own info, or an admin can update any user's info.
     @PutMapping("/{id}")
-    @PreAuthorize("#id == authentication.principal.id or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('ADMIN') or #id.toString() == authentication.principal.username")
     public ResponseEntity<UserDTO> updateUser(@PathVariable UUID id, @RequestBody User user) {
         user.setUserId(id);
         User updatedUser = userService.update(id, user);
@@ -91,7 +93,6 @@ public class UserController {
         return ResponseEntity.ok(userDTO);
     }
 
-    // ADMIN ONLY
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID id) {
