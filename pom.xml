@@ -16,6 +16,8 @@
     <properties>
         <java.version>21</java.version>
         <bucket4j.version>8.10.0</bucket4j.version>
+        <!-- Adicionar a propriedade lombok.version se não existir -->
+        <lombok.version>1.18.34</lombok.version> <!-- Verifique a versão mais recente -->
     </properties>
     <dependencies>
 
@@ -183,11 +185,13 @@
 
     <build>
         <plugins>
+            <!-- CONFIGURAÇÃO ATUALIZADA AQUI -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
+                    <release>21</release> <!-- Especifica a versão do Java -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
@@ -207,6 +211,8 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+            <!-- FIM DA CONFIGURAÇÃO ATUALIZADA -->
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
