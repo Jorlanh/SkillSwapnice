@@ -2,11 +2,11 @@ name: "CodeQL"
 
 on:
   push:
-    branches: [ main ] # Se sua branch principal for outra (ex: master), altere aqui
+    branches: [ main ]
   pull_request:
-    branches: [ main ] # Se sua branch principal for outra (ex: master), altere aqui
+    branches: [ main ]
   schedule:
-    - cron: '30 2 * * 1' # Executa às 2:30 toda segunda-feira
+    - cron: '30 2 * * 1'
 
 jobs:
   analyze:
@@ -31,8 +31,9 @@ jobs:
       with:
         languages: ${{ matrix.language }}
 
-    - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+    # ETAPA MODIFICADA AQUI
+    - name: Build with Maven
+      run: mvn clean install -DskipTests -f pom.xml
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
