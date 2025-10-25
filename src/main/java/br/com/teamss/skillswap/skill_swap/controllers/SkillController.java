@@ -6,6 +6,7 @@ import br.com.teamss.skillswap.skill_swap.model.services.SkillService;
 import br.com.teamss.skillswap.skill_swap.model.services.SkillServiceDTO;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,6 +34,7 @@ public class SkillController {
     }
 
     @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SkillDTO> createSkill(@RequestBody Skill skill) {
         Skill savedSkill = skillService.save(skill);
         SkillDTO skillDTO = skillServiceDTO.toSkillDTO(savedSkill);
@@ -40,6 +42,7 @@ public class SkillController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SkillDTO> updateSkill(@PathVariable Long id, @RequestBody Skill skill) {
         skill.setSkillId(id);
         Skill updatedSkill = skillService.save(skill);
@@ -48,6 +51,7 @@ public class SkillController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteSkill(@PathVariable Long id) {
         skillService.delete(id);
         return ResponseEntity.noContent().build();

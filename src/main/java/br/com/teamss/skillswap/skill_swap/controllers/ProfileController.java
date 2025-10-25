@@ -3,16 +3,11 @@ package br.com.teamss.skillswap.skill_swap.controllers;
 import java.util.List;
 import java.util.UUID;
 
+import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
+import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import br.com.teamss.skillswap.skill_swap.model.entities.Post;
 import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
@@ -24,134 +19,64 @@ import br.com.teamss.skillswap.skill_swap.model.services.ProfileService;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final UserServiceDTO userServiceDTO;
 
-    public ProfileController(ProfileService profileService) {
+    public ProfileController(ProfileService profileService, UserServiceDTO userServiceDTO) {
         this.profileService = profileService;
+        this.userServiceDTO = userServiceDTO;
     }
 
-    @GetMapping
-    public ResponseEntity<List<Profile>> getAllProfiles() {
-        List<Profile> profiles = profileService.findAll();
-        return ResponseEntity.ok(profiles);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Profile> getProfileById(@PathVariable Long id) {
-        Profile profile = profileService.findById(id).orElse(null);
-        return ResponseEntity.ok(profile);
-    }
-
+    // Endpoint público para ver um perfil por ID de utilizador.
     @GetMapping("/user/{userId}")
     public ResponseEntity<Profile> getProfileByUserId(@PathVariable UUID userId) {
-        Profile profile = profileService.findByUserId(userId).orElse(null);
+        Profile profile = profileService.findByUserId(userId)
+            .orElseThrow(() -> new RuntimeException("Profile not found"));
         return ResponseEntity.ok(profile);
     }
 
-    @PostMapping("/user/{userId}")
-    public ResponseEntity<Profile> createProfile(@RequestBody Profile profile, @PathVariable UUID userId) {
-        Profile createdProfile = profileService.createProfile(profile, userId);
-        return ResponseEntity.ok(createdProfile);
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Profile> updateProfile(@PathVariable Long id, @RequestBody Profile profileDetails) {
-        Profile updatedProfile = profileService.update(id, profileDetails);
+    // Endpoint seguro para o utilizador autenticado atualizar o seu próprio perfil.
+    @PutMapping("/me")
+    public ResponseEntity<Profile> updateMyProfile(@RequestBody Profile profileDetails) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        Profile userProfile = profileService.findByUserId(authenticatedUser.getUserId())
+            .orElseThrow(() -> new RuntimeException("Profile not found for authenticated user"));
+        Profile updatedProfile = profileService.update(userProfile.getProfileId(), profileDetails);
         return ResponseEntity.ok(updatedProfile);
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteProfile(@PathVariable Long id) {
-        profileService.delete(id);
-        return ResponseEntity.noContent().build();
+    // Endpoint seguro para obter o feed do utilizador autenticado.
+    @GetMapping("/me/feed")
+    public ResponseEntity<List<Post>> getMyFeed() {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        return ResponseEntity.ok(profileService.getFeed(authenticatedUser.getUserId()));
     }
 
-    @GetMapping("/{userId}/feed")
-    public ResponseEntity<List<Post>> getFeed(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getFeed(userId));
+    // Endpoint seguro para o utilizador autenticado interagir com publicações.
+    @PostMapping("/me/posts/{postId}/like")
+    public ResponseEntity<Post> likePost(@PathVariable Long postId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        return ResponseEntity.ok(profileService.likePost(postId, authenticatedUser.getUserId()));
     }
 
-    @PostMapping("/{userId}/posts/{postId}/view")
-    public ResponseEntity<Void> incrementViewCount(@PathVariable UUID userId, @PathVariable Long postId) {
-        profileService.incrementViewCount(postId);
+    @PostMapping("/me/posts/{postId}/comment")
+    public ResponseEntity<Post> commentOnPost(@PathVariable Long postId, @RequestParam String content) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        return ResponseEntity.ok(profileService.commentOnPost(postId, authenticatedUser.getUserId(), content));
+    }
+    
+    // Endpoint seguro para o utilizador autenticado seguir outro utilizador.
+    @PostMapping("/me/follow/{targetUserId}")
+    public ResponseEntity<Void> followUser(@PathVariable UUID targetUserId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        profileService.followUser(authenticatedUser.getUserId(), targetUserId);
         return ResponseEntity.ok().build();
     }
 
-    @PostMapping("/{userId}/posts/{postId}/like")
-    public ResponseEntity<Post> likePost(@PathVariable UUID userId, @PathVariable Long postId) {
-        return ResponseEntity.ok(profileService.likePost(postId, userId));
-    }
-
-    @PostMapping("/{userId}/posts/{postId}/comment")
-    public ResponseEntity<Post> commentOnPost(@PathVariable UUID userId, @PathVariable Long postId, @RequestParam String content) {
-        return ResponseEntity.ok(profileService.commentOnPost(postId, userId, content));
-    }
-
-    @PostMapping("/{userId}/posts/{postId}/repost")
-    public ResponseEntity<Post> repost(@PathVariable UUID userId, @PathVariable Long postId) {
-        return ResponseEntity.ok(profileService.repost(postId, userId));
-    }
-
-    @GetMapping("/{userId}/posts/{postId}/share")
-    public ResponseEntity<String> generateShareLink(@PathVariable UUID userId, @PathVariable Long postId) {
-        return ResponseEntity.ok(profileService.generateShareLink(postId));
-    }
-
-    @GetMapping("/{userId}/achievements")
-    public ResponseEntity<List<String>> getAchievements(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getAchievements(userId));
-    }
-
-    @GetMapping("/{userId}/activity")
-    public ResponseEntity<List<Post>> getActivity(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getActivity(userId));
-    }
-
-    @GetMapping("/{userId}/highlights")
-    public ResponseEntity<List<Post>> getHighlights(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getHighlights(userId));
-    }
-
-    @GetMapping("/{userId}/communities")
-    public ResponseEntity<List<Post>> getCommunityPosts(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getCommunityPosts(userId));
-    }
-
-    @PostMapping("/{userId}/follow/{targetUserId}")
-    public ResponseEntity<Void> followUser(@PathVariable UUID userId, @PathVariable UUID targetUserId) {
-        profileService.followUser(userId, targetUserId);
+    // Endpoint seguro para o utilizador autenticado deixar de seguir outro utilizador.
+    @PostMapping("/me/unfollow/{targetUserId}")
+    public ResponseEntity<Void> unfollowUser(@PathVariable UUID targetUserId) {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        profileService.unfollowUser(authenticatedUser.getUserId(), targetUserId);
         return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/{userId}/unfollow/{targetUserId}")
-    public ResponseEntity<Void> unfollowUser(@PathVariable UUID userId, @PathVariable UUID targetUserId) {
-        profileService.unfollowUser(userId, targetUserId);
-        return ResponseEntity.ok().build();
-    }
-
-    @PutMapping("/{userId}/edit")
-    public ResponseEntity<User> updateProfile(@PathVariable UUID userId, @RequestBody User updatedUser) {
-        return ResponseEntity.ok(profileService.updateProfile(userId, updatedUser));
-    }
-
-    @GetMapping("/{userId}/edit/back")
-    public ResponseEntity<Void> backToProfile(@PathVariable UUID userId) {
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/{senderId}/messages/{receiverId}")
-    public ResponseEntity<Void> sendMessage(@PathVariable UUID senderId, @PathVariable UUID receiverId, @RequestParam String content, @RequestParam String type) {
-        profileService.sendMessage(senderId, receiverId, content, type);
-        return ResponseEntity.ok().build();
-    }
-
-    @PostMapping("/{userId}/schedule")
-    public ResponseEntity<Void> scheduleLesson(@PathVariable UUID userId, @RequestParam String calendarEvent) {
-        profileService.scheduleLesson(userId, calendarEvent);
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/{userId}/messages")
-    public ResponseEntity<List<UUID>> getMessages(@PathVariable UUID userId) {
-        return ResponseEntity.ok(profileService.getMessages(userId));
     }
 }
