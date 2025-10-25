@@ -26,9 +26,7 @@
 
     <appender name="SecurityAuditFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOGS}/security-audit.log</file>
-        <encoder>
-            <Pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} - %msg%n</Pattern>
-        </encoder>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOGS}/archived/security-audit-%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>

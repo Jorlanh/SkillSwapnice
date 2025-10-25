@@ -15,7 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.security.web.csrf.CookieCsrfTokenRepository; // IMPORTADO
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.header.writers.XXssProtectionHeaderWriter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
@@ -31,15 +31,12 @@ public class SecurityFilterChainConfig {
 
     private final UserDetailsService userDetailsService;
     private final JwtTokenUtil jwtTokenUtil;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
-    public SecurityFilterChainConfig(UserDetailsService userDetailsService, JwtTokenUtil jwtTokenUtil) {
+    public SecurityFilterChainConfig(UserDetailsService userDetailsService, JwtTokenUtil jwtTokenUtil, JwtAuthenticationFilter jwtAuthenticationFilter) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenUtil = jwtTokenUtil;
-    }
-
-    @Bean
-    public JwtAuthenticationFilter jwtAuthenticationFilter() {
-        return new JwtAuthenticationFilter(userDetailsService, jwtTokenUtil);
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
     }
 
     @Bean
@@ -54,13 +51,11 @@ public class SecurityFilterChainConfig {
         return http.build();
     }
 
-
     @Bean
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // CSRF HABILITADO - A linha de desativação foi removida.
             .csrf(csrf -> csrf
                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
             )
@@ -69,8 +64,16 @@ public class SecurityFilterChainConfig {
                     .includeSubDomains(true)
                     .maxAgeInSeconds(31536000)
                 )
+                // MODIFICADO: CSP aprofundada
                 .contentSecurityPolicy(csp -> csp
-                    .policyDirectives("default-src 'self'; script-src 'self'; object-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none';")
+                    .policyDirectives("default-src 'self'; " +
+                                      "script-src 'self'; " +
+                                      "style-src 'self' https://fonts.googleapis.com; " + // Permite estilos do Google Fonts
+                                      "font-src 'self' https://fonts.gstatic.com; " +    // Permite fontes do Google Fonts
+                                      "img-src 'self' data:; " +
+                                      "object-src 'none'; " +
+                                      "connect-src 'self'; " +
+                                      "frame-ancestors 'none';")
                 )
                 .frameOptions(frameOptions -> frameOptions
                     .deny()
@@ -83,6 +86,7 @@ public class SecurityFilterChainConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/login"),
+                    AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/logout"), // Permitir logout
                     AntPathRequestMatcher.antMatcher(HttpMethod.POST, "/api/register"),
                     AntPathRequestMatcher.antMatcher("/api/verify"),
                     AntPathRequestMatcher.antMatcher("/api/password-reset/**"),
@@ -96,7 +100,7 @@ public class SecurityFilterChainConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -111,7 +115,7 @@ public class SecurityFilterChainConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Rate-Limit-Remaining", "X-XSRF-TOKEN")); // Adicionado X-XSRF-TOKEN
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "X-Requested-With", "X-Rate-Limit-Remaining", "X-XSRF-TOKEN"));
         configuration.setExposedHeaders(Arrays.asList("X-Rate-Limit-Remaining"));
         configuration.setAllowCredentials(true);
 

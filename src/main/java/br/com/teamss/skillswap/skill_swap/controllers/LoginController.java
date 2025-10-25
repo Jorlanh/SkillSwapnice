@@ -71,7 +71,7 @@ public class LoginController {
 
             if (loginService.verifyTwoFactorCode(user.getUserId(), twoFactorMethod, twoFactorCode)) {
                 String jwtToken = loginService.authenticateAndGetToken(loginRequest);
-                auditService.logLoginSuccess(user.getUsername(), request); // Log de sucesso após 2FA
+                auditService.logLoginSuccess(user.getUsername(), request);
                 return ResponseEntity.ok(new LoginResponseDTO(jwtToken, "Login 2FA bem-sucedido!"));
             } else {
                 auditService.logLoginFailure(user.getUsername(), "Código 2FA inválido ou expirado", request);
