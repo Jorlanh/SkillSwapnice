@@ -14,7 +14,7 @@
     <name>skill-swap</name>
     <description>Demo project for Spring Boot</description>
     <properties>
-        <java.version>17</java.version> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
+        <java.version>25</java.version> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
         <bucket4j.version>8.10.0</bucket4j.version>
         <lombok.version>1.18.34</lombok.version>
     </properties>
@@ -190,8 +190,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.13.0</version> <!-- VERSÃO ESTÁVEL -->
                 <configuration>
-                    <source>17</source> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
-                    <target>17</target> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
+                    <source>25</source> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
+                    <target>25</target> <!-- VERSÃO DO JAVA ALTERADA PARA 17 -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.projectlombok</groupId>
