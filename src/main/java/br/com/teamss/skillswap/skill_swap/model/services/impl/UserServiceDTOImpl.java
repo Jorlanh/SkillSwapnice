@@ -1,9 +1,6 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
-import br.com.teamss.skillswap.skill_swap.dto.ProfileDTO;
-import br.com.teamss.skillswap.skill_swap.dto.SkillDTO;
-import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
-import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
+import br.com.teamss.skillswap.skill_swap.dto.*;
 import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
 import br.com.teamss.skillswap.skill_swap.model.entities.Role;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
@@ -29,7 +26,6 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
     @Override
     public UserDTO toUserDTO(User user) {
-        // ... (código existente)
         ProfileDTO profileDTO = null;
         if (user.getProfile() != null) {
             Profile profile = user.getProfile();
@@ -75,12 +71,10 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         return userDTO;
     }
 
-    // ... (outros métodos existentes)
-
     @Override
     public List<UserSummaryDTO> findAllSummaries() {
         return userRepository.findAll().stream()
-                .map(user -> new UserSummaryDTO(user.getUserId(), user.getUsername(), user.getName()))
+                .map(user -> new UserSummaryDTO(user.getUsername(), user.getName()))
                 .collect(Collectors.toList());
     }
 
@@ -95,7 +89,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     public UserSummaryDTO findSummaryByIdDTO(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
-        return new UserSummaryDTO(user.getUserId(), user.getUsername(), user.getName());
+        return new UserSummaryDTO(user.getUsername(), user.getName());
     }
 
     @Override
@@ -138,7 +132,6 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         return toUserDTO(user);
     }
     
-    // NOVA IMPLEMENTAÇÃO
     @Override
     public UserDTO getAuthenticatedUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
@@ -151,5 +144,58 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Utilizador autenticado não encontrado na base de dados."));
         return toUserDTO(user);
+    }
+
+    // NOVAS IMPLEMENTAÇÕES
+    @Override
+    public UserPublicProfileDTO toUserPublicProfileDTO(User user) {
+        Profile profile = user.getProfile();
+        ProfileDTO profileDTO = null;
+        if (profile != null) {
+            profileDTO = new ProfileDTO(
+                profile.getProfileId(), profile.getDescription(), profile.getImageUrl(),
+                profile.getLocation(), profile.getContactInfo(), profile.getSocialMediaLinks(),
+                profile.getAvailabilityStatus(), profile.getInterests(),
+                profile.getExperienceLevel(), profile.getEducationLevel()
+            );
+        }
+
+        Set<SkillDTO> skills = user.getSkills().stream()
+            .map(skill -> new SkillDTO(skill.getSkillId(), skill.getName(), skill.getDescription(), skill.getCategory(), skill.getLevel()))
+            .collect(Collectors.toSet());
+
+        return new UserPublicProfileDTO(user.getUsername(), user.getName(), profileDTO, skills);
+    }
+
+    @Override
+    public UserPrivateProfileDTO toUserPrivateProfileDTO(User user) {
+        Profile profile = user.getProfile();
+        ProfileDTO profileDTO = null;
+        if (profile != null) {
+            profileDTO = new ProfileDTO(
+                profile.getProfileId(), profile.getDescription(), profile.getImageUrl(),
+                profile.getLocation(), profile.getContactInfo(), profile.getSocialMediaLinks(),
+                profile.getAvailabilityStatus(), profile.getInterests(),
+                profile.getExperienceLevel(), profile.getEducationLevel()
+            );
+        }
+
+        Set<SkillDTO> skills = user.getSkills().stream()
+            .map(skill -> new SkillDTO(skill.getSkillId(), skill.getName(), skill.getDescription(), skill.getCategory(), skill.getLevel()))
+            .collect(Collectors.toSet());
+
+        Set<String> roles = user.getRoles().stream().map(Role::getName).collect(Collectors.toSet());
+
+        return new UserPrivateProfileDTO(
+            user.getUserId(), user.getUsername(), user.getEmail(), user.getName(),
+            profileDTO, skills, roles
+        );
+    }
+
+    @Override
+    public UserPublicProfileDTO findPublicProfileByUsername(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com username: " + username));
+        return toUserPublicProfileDTO(user);
     }
 }

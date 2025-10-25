@@ -1,10 +1,15 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
 import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserPrivateProfileDTO;
+import br.com.teamss.skillswap.skill_swap.dto.UserPublicProfileDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.UserService;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
+import jakarta.persistence.EntityNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,6 +23,9 @@ public class UserController {
     private final UserService userService;
     private final UserServiceDTO userServiceDTO;
 
+    @Autowired
+    private UserRepository userRepository; // Adicionado para buscar o usuário completo
+
     public UserController(UserService userService, UserServiceDTO userServiceDTO) {
         this.userServiceDTO = userServiceDTO;
         this.userService = userService;
@@ -28,9 +36,20 @@ public class UserController {
         return userServiceDTO.findAllSummaries();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<UserSummaryDTO> getUserById(@PathVariable UUID id) {
-        return ResponseEntity.ok(userServiceDTO.findSummaryByIdDTO(id));
+    // ENDPOINT PÚBLICO: Retorna dados públicos de qualquer usuário pelo username. NÃO expõe o UUID.
+    @GetMapping("/{username}")
+    public ResponseEntity<UserPublicProfileDTO> getUserByUsername(@PathVariable String username) {
+        return ResponseEntity.ok(userServiceDTO.findPublicProfileByUsername(username));
+    }
+
+    // ENDPOINT PRIVADO: Retorna os dados completos, incluindo UUID, APENAS do usuário autenticado.
+    @GetMapping("/me")
+    public ResponseEntity<UserPrivateProfileDTO> getMyProfile() {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        // Recarrega a entidade User para garantir que todos os dados (incluindo roles) estejam presentes
+        User user = userRepository.findById(authenticatedUser.getUserId())
+            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado no banco de dados."));
+        return ResponseEntity.ok(userServiceDTO.toUserPrivateProfileDTO(user));
     }
 
     @PostMapping

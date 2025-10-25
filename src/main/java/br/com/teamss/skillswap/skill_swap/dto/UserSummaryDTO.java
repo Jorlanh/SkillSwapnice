@@ -2,27 +2,25 @@ package br.com.teamss.skillswap.skill_swap.dto;
 
 import java.util.UUID;
 
-// DTO para exibir apenas informações públicas do usuário
+// DTO para exibir APENAS informações públicas e não sensíveis de um usuário.
 public class UserSummaryDTO {
 
-    private UUID userId;
+    // O userId foi REMOVIDO dos campos para exposição pública.
     private String username;
     private String name;
 
-    // Construtor, Getters e Setters
+    // Construtor ajustado para não exigir mais o userId.
+    public UserSummaryDTO(String username, String name) {
+        this.username = username;
+        this.name = name;
+    }
+    
+    // Construtor antigo mantido para retrocompatibilidade, caso necessário em outros pontos.
     public UserSummaryDTO(UUID userId, String username, String name) {
-        this.userId = userId;
         this.username = username;
         this.name = name;
     }
 
-    public UUID getUserId() {
-        return userId;
-    }
-
-    public void setUserId(UUID userId) {
-        this.userId = userId;
-    }
 
     public String getUsername() {
         return username;
