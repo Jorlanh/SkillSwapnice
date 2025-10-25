@@ -12,8 +12,6 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-
-    # PERMISSÕES CRÍTICAS PARA O CODEQL FUNCIONAR
     permissions:
       actions: read
       contents: read
@@ -26,10 +24,12 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      # ATUALIZADO AQUI
+      uses: actions/checkout@v4
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      # ATUALIZADO AQUI
+      uses: github/codeql-action/init@v3
       with:
         languages: ${{ matrix.language }}
 
@@ -37,6 +37,5 @@ jobs:
       run: mvn clean install -DskipTests -f pom.xml
 
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
-
-      #up
+      # ATUALIZADO AQUI
+      uses: github/codeql-action/analyze@v3
