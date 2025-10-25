@@ -19,11 +19,9 @@
         <bucket4j.version>8.10.0</bucket4j.version>
         <lombok.version>1.18.34</lombok.version>
         <spring-security.version>6.3.2</spring-security.version>
-        <!-- Atualizado para versão sem CVEs conhecidas listadas no report -->
-        <tomcat.version>10.1.30</tomcat.version>
+        <tomcat.version>10.1.26</tomcat.version> 
         <guava.version>33.2.1-jre</guava.version>
-        <!-- Atualizado para versão mais recente do BOM gRPC -->
-        <grpc.version>1.67.1</grpc.version>
+        <grpc.version>1.65.1</grpc.version> 
     </properties>
 
     <dependencyManagement>
@@ -279,7 +277,6 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!-- Mantive o comportamento padrão de falhar em CVSS >= 7 -->
                     <failBuildOnCVSS>7</failBuildOnCVSS>
                     <format>ALL</format>
                     <scanSet>
@@ -294,9 +291,6 @@
                             </excludes>
                         </fileSet>
                     </scanSet>
-                    <!-- Suporte a arquivo de supressões (opcional) -->
-                    <suppressionFile>${project.basedir}/owasp-suppressions.xml</suppressionFile>
-                    <!-- Permite que CI pule o check via profile (dependency-check.skip=true) -->
                 </configuration>
             </plugin>
         </plugins>
@@ -314,14 +308,4 @@
             </resource>
         </resources>
     </build>
-
-    <!-- Profile para pular o dependency-check (usar no CI com -Powasp-skip) -->
-    <profiles>
-        <profile>
-            <id>owasp-skip</id>
-            <properties>
-                <dependency-check.skip>true</dependency-check.skip>
-            </properties>
-        </profile>
-    </profiles>
 </project>
