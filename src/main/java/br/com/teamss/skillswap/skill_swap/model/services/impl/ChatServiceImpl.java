@@ -4,13 +4,14 @@ import br.com.teamss.skillswap.skill_swap.dto.ChatMessageRequestDTO;
 import br.com.teamss.skillswap.skill_swap.model.entities.ChatMessage;
 import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.exception.InappropriateContentException;
 import br.com.teamss.skillswap.skill_swap.model.repositories.ChatRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.ChatService;
+import br.com.teamss.skillswap.skill_swap.model.services.ContentModerationService;
 import br.com.teamss.skillswap.skill_swap.model.services.EmailService;
 import jakarta.persistence.EntityNotFoundException;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,9 +30,15 @@ public class ChatServiceImpl implements ChatService {
     private EmailService emailService;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private ContentModerationService moderationService;
 
     @Override
     public ChatMessage sendMessage(ChatMessageRequestDTO messageRequest) {
+        if (moderationService.isContentInappropriate(messageRequest.getContent())) {
+            throw new InappropriateContentException("A sua mensagem não pôde ser enviada pois contém texto que viola as nossas diretrizes da comunidade.");
+        }
+
         User sender = userRepository.findById(messageRequest.getSenderId())
                 .orElseThrow(() -> new EntityNotFoundException("Remetente não encontrado"));
         User receiver = userRepository.findById(messageRequest.getReceiverId())
@@ -44,7 +51,9 @@ public class ChatServiceImpl implements ChatService {
 
         return saveAndNotify(message);
     }
-
+    
+    // ... (o resto dos métodos da classe continua aqui, sem alterações) ...
+    
     @Override
     public ChatMessage sendVoiceMessage(UUID senderId, UUID receiverId, byte[] voiceData) {
         User sender = userRepository.findById(senderId)
@@ -76,7 +85,6 @@ public class ChatServiceImpl implements ChatService {
         return saveAndNotify(message);
     }
     
-    // Método privado para evitar repetição de código
     private ChatMessage saveAndNotify(ChatMessage message) {
         ChatMessage savedMessage = chatRepository.save(message);
 
@@ -98,7 +106,6 @@ public class ChatServiceImpl implements ChatService {
 
      @Override
     public List<ChatMessage> getChatHistory(UUID userId1, UUID userId2) {
-        // A query agora espera UUIDs, então esta chamada vai funcionar.
         return chatRepository.findBySenderIdAndReceiverIdOrSenderIdAndReceiverId(userId1, userId2, userId2, userId1);
     }
 }

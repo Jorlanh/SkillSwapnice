@@ -3,35 +3,23 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 import br.com.teamss.skillswap.skill_swap.dto.LikeDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PostResponseDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
-import br.com.teamss.skillswap.skill_swap.model.entities.Comment;
-import br.com.teamss.skillswap.skill_swap.model.entities.Like;
-import br.com.teamss.skillswap.skill_swap.model.entities.Post;
-import br.com.teamss.skillswap.skill_swap.model.entities.Repost;
-import br.com.teamss.skillswap.skill_swap.model.entities.ShareLink;
-import br.com.teamss.skillswap.skill_swap.model.entities.User;
-import br.com.teamss.skillswap.skill_swap.model.repositories.CommentRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.LikeRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.PostRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.RepostRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.ShareLinkRepository;
-import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
+import br.com.teamss.skillswap.skill_swap.model.entities.*;
+import br.com.teamss.skillswap.skill_swap.model.exception.InappropriateContentException;
+import br.com.teamss.skillswap.skill_swap.model.repositories.*;
+import br.com.teamss.skillswap.skill_swap.model.services.ContentModerationService;
 import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
 import br.com.teamss.skillswap.skill_swap.model.services.PostService;
-import java.io.IOException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class PostServiceImpl implements PostService {
@@ -43,15 +31,15 @@ public class PostServiceImpl implements PostService {
     private final RepostRepository repostRepository;
     private final ShareLinkRepository shareLinkRepository;
     private final CommentRepository commentRepository;
-
-    @Autowired
-    private FileUploadService fileUploadService;
+    private final FileUploadService fileUploadService;
+    private final ContentModerationService moderationService;
 
     @Autowired
     public PostServiceImpl(PostRepository postRepository, UserRepository userRepository,
                            NotificationService notificationService, LikeRepository likeRepository,
                            RepostRepository repostRepository, ShareLinkRepository shareLinkRepository,
-                           CommentRepository commentRepository) {
+                           CommentRepository commentRepository, FileUploadService fileUploadService,
+                           ContentModerationService moderationService) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
@@ -59,16 +47,18 @@ public class PostServiceImpl implements PostService {
         this.repostRepository = repostRepository;
         this.shareLinkRepository = shareLinkRepository;
         this.commentRepository = commentRepository;
+        this.fileUploadService = fileUploadService;
+        this.moderationService = moderationService;
     }
 
     @Override
     public Post createPost(UUID userId, String title, String content, MultipartFile image, MultipartFile video) throws IOException {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
-
+        if (moderationService.isContentInappropriate(title) || moderationService.isContentInappropriate(content)) {
+            throw new InappropriateContentException("O seu post não pôde ser publicado pois contém texto que viola as nossas diretrizes da comunidade.");
+        }
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
         String imageUrl = fileUploadService.uploadFile(image);
         String videoUrl = fileUploadService.uploadFile(video);
-
         Post post = new Post();
         post.setUser(user);
         post.setTitle(title);
@@ -76,15 +66,31 @@ public class PostServiceImpl implements PostService {
         post.setProfile(user.getProfile());
         post.setImageUrl(imageUrl);
         post.setVideoUrl(videoUrl);
-        post.setLikesCount(0);
-        post.setRepostsCount(0);
-        post.setCommentsCount(0);
-        post.setSharesCount(0);
         post.setCreatedAt(Instant.now());
-
         return postRepository.save(post);
     }
 
+    @Override
+    @Transactional
+    public Post commentOnPost(Long postId, UUID userId, String content) {
+        if (moderationService.isContentInappropriate(content)) {
+            throw new InappropriateContentException("O seu comentário não pôde ser publicado pois contém texto que viola as nossas diretrizes da comunidade.");
+        }
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        Comment newComment = new Comment();
+        newComment.setPost(post);
+        newComment.setUser(user);
+        newComment.setContent(content);
+        commentRepository.save(newComment);
+        post.setCommentsCount(post.getCommentsCount() + 1);
+        Post updatedPost = postRepository.save(post);
+        notificationService.createNotification(post.getUser().getUserId(), "Seu post recebeu um comentário de " + user.getUsername());
+        return updatedPost;
+    }
+
+    // ... (o resto dos métodos da classe continua aqui, sem alterações) ...
+    
     @Override
     @Transactional
     public Post likePost(Long postId, UUID userId) {
@@ -132,36 +138,9 @@ public class PostServiceImpl implements PostService {
         repostPost.setTitle("Repost: " + originalPost.getTitle());
         repostPost.setContent(originalPost.getContent());
         repostPost.setProfile(user.getProfile());
-        repostPost.setLikesCount(0);
-        repostPost.setRepostsCount(0);
-        repostPost.setCommentsCount(0);
-        repostPost.setSharesCount(0);
         postRepository.save(repostPost);
 
         return originalPost;
-    }
-
-    @Override
-    @Transactional
-    public Post commentOnPost(Long postId, UUID userId, String content) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
-        
-        Comment newComment = new Comment();
-        newComment.setPost(post);
-        newComment.setUser(user);
-        newComment.setContent(content);
-        commentRepository.save(newComment);
-
-        post.setCommentsCount(post.getCommentsCount() + 1);
-        Post updatedPost = postRepository.save(post);
-
-        notificationService.createNotification(post.getUser().getUserId(),
-                "Seu post recebeu um comentário de " + user.getUsername());
-
-        return updatedPost;
     }
 
     @Override
@@ -176,8 +155,6 @@ public class PostServiceImpl implements PostService {
         shareLink.setPost(post);
         shareLink.setUser(user);
         shareLink.setShareUrl(shareUrl);
-        shareLink.setClickCount(0);
-
         shareLinkRepository.save(shareLink);
         post.setSharesCount(post.getSharesCount() + 1);
         postRepository.save(post);
@@ -214,7 +191,6 @@ public class PostServiceImpl implements PostService {
         return posts.stream().map(post -> {
             PostResponseDTO dto = new PostResponseDTO();
             UserSummaryDTO userSummary = new UserSummaryDTO(
-                post.getUser().getUserId(),
                 post.getUser().getUsername(),
                 post.getUser().getName()
             );

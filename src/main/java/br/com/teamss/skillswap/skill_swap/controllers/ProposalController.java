@@ -37,6 +37,12 @@ public class ProposalController {
         return ResponseEntity.ok(updatedProposal);
     }
 
+    @PostMapping("/negotiate/{proposalId}")
+    public ResponseEntity<Proposal> negotiateProposal(@PathVariable Long proposalId) {
+        Proposal updatedProposal = proposalService.negotiateProposal(proposalId);
+        return ResponseEntity.ok(updatedProposal);
+    }
+
     @PostMapping("/reject/{proposalId}")
     public ResponseEntity<Proposal> rejectProposal(@PathVariable Long proposalId) {
         Proposal updatedProposal = proposalService.rejectProposal(proposalId);
@@ -46,6 +52,13 @@ public class ProposalController {
     @PostMapping("/block/{proposalId}")
     public ResponseEntity<Proposal> blockProposal(@PathVariable Long proposalId) {
         Proposal updatedProposal = proposalService.blockProposal(proposalId);
+        return ResponseEntity.ok(updatedProposal);
+    }
+
+    // NOVO ENDPOINT ADICIONADO
+    @PostMapping("/complete/{proposalId}")
+    public ResponseEntity<Proposal> completeProposal(@PathVariable Long proposalId) {
+        Proposal updatedProposal = proposalService.completeProposal(proposalId);
         return ResponseEntity.ok(updatedProposal);
     }
 }

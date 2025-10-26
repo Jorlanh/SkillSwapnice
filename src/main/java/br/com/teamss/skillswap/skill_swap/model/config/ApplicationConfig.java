@@ -10,6 +10,8 @@ import br.com.teamss.skillswap.skill_swap.model.repositories.RepostRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.ShareLinkRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.CommunityService;
+import br.com.teamss.skillswap.skill_swap.model.services.ContentModerationService;
+import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.ProfileService;
 import br.com.teamss.skillswap.skill_swap.model.services.TrendingService;
 import br.com.teamss.skillswap.skill_swap.model.services.impl.CommunityServiceImpl;
@@ -35,8 +37,10 @@ public class ApplicationConfig {
     public CommunityService communityService(CommunityRepository communityRepository, UserRepository userRepository,
             PostRepository postRepository, CommunityMemberRepository communityMemberRepository,
             ProfileRepository profileRepository, LikeRepository likeRepository, CommentRepository commentRepository,
-            RepostRepository repostRepository, ShareLinkRepository shareLinkRepository) {
+            RepostRepository repostRepository, ShareLinkRepository shareLinkRepository,
+            FileUploadService fileUploadService, ContentModerationService moderationService) {
         return new CommunityServiceImpl(communityRepository, userRepository, postRepository, communityMemberRepository,
-                profileRepository, likeRepository, commentRepository, repostRepository, shareLinkRepository);
+                profileRepository, likeRepository, commentRepository, repostRepository, shareLinkRepository,
+                fileUploadService, moderationService);
     }
 }

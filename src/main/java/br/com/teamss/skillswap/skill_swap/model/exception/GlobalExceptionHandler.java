@@ -20,6 +20,16 @@ public class GlobalExceptionHandler {
     @Autowired
     private SecurityAuditService auditService;
 
+    @ExceptionHandler(InappropriateContentException.class)
+    public ProblemDetail handleInappropriateContent(InappropriateContentException ex) {
+        // Usamos HttpStatus.UNPROCESSABLE_ENTITY (422), que indica que a requisição está bem formada,
+        // mas não pode ser processada por razões semânticas (o conteúdo é inválido).
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
+        problem.setTitle("Conteúdo Inapropriado");
+        problem.setType(URI.create("urn:problem-type:inappropriate-content"));
+        return problem;
+    }
+
     @ExceptionHandler(NoResourceFoundException.class)
     public ProblemDetail handleNoResourceFound(NoResourceFoundException ex) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, "O recurso solicitado não foi encontrado: " + ex.getResourcePath());
