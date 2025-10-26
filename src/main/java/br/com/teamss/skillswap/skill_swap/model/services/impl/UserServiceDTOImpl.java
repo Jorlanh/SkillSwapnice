@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional; // Importação adicionada
 
 import java.time.Instant;
 import java.util.List;
@@ -48,11 +49,11 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
         Set<SkillDTO> skills = user.getSkills().stream()
                 .map(skill -> new SkillDTO(
-                    skill.getSkillId(),
-                    skill.getName(),
-                    skill.getDescription(),
-                    skill.getCategory(),
-                    skill.getLevel()
+                        skill.getSkillId(),
+                        skill.getName(),
+                        skill.getDescription(),
+                        skill.getCategory(),
+                        skill.getLevel()
                 ))
                 .collect(Collectors.toSet());
 
@@ -72,6 +73,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<UserSummaryDTO> findAllSummaries() {
         return userRepository.findAll().stream()
                 .map(user -> new UserSummaryDTO(user.getUsername(), user.getName()))
@@ -79,6 +81,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDTO findByIdDTO(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -86,6 +89,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public UserSummaryDTO findSummaryByIdDTO(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -93,6 +97,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional
     public void updateVerificationCode(UUID userId, String code) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -101,6 +106,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional
     public void updateVerificationStatus(UUID userId, boolean verified) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -114,6 +120,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional
     public void saveUserDTO(UserDTO userDTO) {
         User user = userRepository.findById(userDTO.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -126,6 +133,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserDTO findByUsernameDTO(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com username: " + username));
@@ -133,6 +141,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
     
     @Override
+    @Transactional(readOnly = true)
     public UserDTO getAuthenticatedUser() {
         Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String username;
@@ -193,6 +202,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public UserPublicProfileDTO findPublicProfileByUsername(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com username: " + username));
