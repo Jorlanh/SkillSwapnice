@@ -43,26 +43,23 @@ public class RankingServiceImpl implements RankingService {
         Proposal proposal = proposalRepository.findById(ratingRequestDTO.getProposalId())
                 .orElseThrow(() -> new IllegalStateException("Proposta não encontrada."));
 
-        // Segurança: Verifica se o estado da proposta é CONCLUÍDO
         if (!"COMPLETED".equals(proposal.getStatus())) {
             throw new IllegalStateException("Só é possível avaliar propostas concluídas.");
         }
 
-        // Segurança: Verifica se o avaliador participou na proposta
         UUID raterId = raterUserDTO.getUserId();
         boolean isParticipant = raterId.equals(proposal.getSender().getUserId()) || raterId.equals(proposal.getReceiver().getUserId());
         if (!isParticipant) {
             throw new AccessDeniedException("Você não tem permissão para avaliar esta troca.");
         }
 
-        // Segurança: Impede autoavaliação
         User ratedUser = raterId.equals(proposal.getSender().getUserId()) ? proposal.getReceiver() : proposal.getSender();
         if (raterId.equals(ratedUser.getUserId())) {
             throw new IllegalStateException("Não é possível avaliar a si mesmo.");
         }
         
-        // Segurança: Impede avaliação duplicada
-        if (ratingRepository.existsByProposalIdAndRaterUser_UserId(proposal.getId(), raterId)) {
+        // CORREÇÃO APLICADA AQUI
+        if (ratingRepository.existsByProposalIdAndRaterUser_UserId(proposal.getProposalId(), raterId)) {
             throw new IllegalStateException("Você já avaliou esta troca de habilidades.");
         }
 

@@ -42,7 +42,7 @@ public class ProposalServiceImpl implements ProposalService {
     @Autowired
     private UserServiceDTO userServiceDTO;
     @Autowired
-    private AchievementService achievementService; // DEPENDÊNCIA ADICIONADA
+    private AchievementService achievementService;
 
     @Override
     public Proposal sendProposal(ProposalRequestDTO proposalRequest) {
@@ -85,7 +85,8 @@ public class ProposalServiceImpl implements ProposalService {
         
         return proposals.stream().map(proposal -> {
             ProposalResponseDTO dto = new ProposalResponseDTO();
-            dto.setProposalId(proposal.getId());
+            // CORREÇÃO APLICADA AQUI
+            dto.setProposalId(proposal.getProposalId());
             dto.setSender(new UserSummaryDTO(proposal.getSender().getUsername(), proposal.getSender().getName()));
             dto.setReceiver(new UserSummaryDTO(proposal.getReceiver().getUsername(), proposal.getReceiver().getName()));
             dto.setOfferedSkill(proposal.getOfferedSkill());
@@ -198,7 +199,6 @@ public class ProposalServiceImpl implements ProposalService {
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new EntityNotFoundException("Proposta não encontrada."));
 
-        // Segurança: Apenas participantes podem concluir a proposta
         boolean isParticipant = authenticatedUser.getUserId().equals(proposal.getSender().getUserId()) ||
                                 authenticatedUser.getUserId().equals(proposal.getReceiver().getUserId());
         if (!isParticipant) {
@@ -212,26 +212,19 @@ public class ProposalServiceImpl implements ProposalService {
         proposal.setStatus("COMPLETED");
         proposal.setUpdatedAt(Instant.now());
 
-        // Notificar ambos os utilizadores para se avaliarem
         String message = "A troca de habilidades foi concluída! Por favor, avalie a sua experiência para ajudar a comunidade.";
         sendNotification(proposal.getSender(), proposal.getSender().getEmail(), "Troca Concluída! Hora de avaliar.", message);
         sendNotification(proposal.getReceiver(), proposal.getReceiver().getEmail(), "Troca Concluída! Hora de avaliar.", message);
 
-        // GATILHO PARA O SISTEMA DE CONQUISTAS!
         achievementService.checkAndUnlockAchievements(proposal.getSender());
         achievementService.checkAndUnlockAchievements(proposal.getReceiver());
 
         return proposalRepository.save(proposal);
     }
 
-    /**
-     * Método auxiliar para centralizar o envio de notificações (na plataforma e por email).
-     */
     private void sendNotification(User userToNotify, String email, String subject, String message) {
-        // Envia notificação por email
         emailService.sendNotification(email, subject, message);
 
-        // Cria notificação na plataforma
         Notification notification = new Notification();
         notification.setUser(userToNotify);
         notification.setMessage(message);
