@@ -12,7 +12,7 @@ import java.util.UUID;
 @Repository
 public interface RatingRepository extends JpaRepository<Rating, Long> {
 
-    boolean existsByProposalIdAndRaterUser_UserId(Long proposalId, UUID raterId);
+    boolean existsByProposal_ProposalIdAndRaterUser_UserId(Long proposalId, UUID raterId);
 
     @Query("SELECT r.ratedUser.id, AVG(r.stars), COUNT(r.id) " +
            "FROM Rating r " +

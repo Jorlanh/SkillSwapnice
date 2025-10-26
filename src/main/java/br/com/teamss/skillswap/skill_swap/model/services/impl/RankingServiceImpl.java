@@ -59,7 +59,7 @@ public class RankingServiceImpl implements RankingService {
         }
         
         // CORREÇÃO APLICADA AQUI
-        if (ratingRepository.existsByProposalIdAndRaterUser_UserId(proposal.getProposalId(), raterId)) {
+        if (ratingRepository.existsByProposal_ProposalIdAndRaterUser_UserId(proposal.getProposalId(), raterId)) {
             throw new IllegalStateException("Você já avaliou esta troca de habilidades.");
         }
 
