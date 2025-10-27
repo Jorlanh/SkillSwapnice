@@ -1,18 +1,18 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
+import br.com.teamss.skillswap.skill_swap.dto.BanRequestDTO;
 import br.com.teamss.skillswap.skill_swap.dto.PlatformStatsDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserManagementDTO;
 import br.com.teamss.skillswap.skill_swap.model.services.AdminService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/console-management") // Caminho não óbvio para o painel de admin
-@PreAuthorize("hasRole('ADMIN')") // Garante que apenas administradores acessem
+@RequestMapping("/console-management")
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
     private final AdminService adminService;
@@ -34,5 +34,17 @@ public class AdminController {
     @PostMapping("/users/{userId}/toggle-verification")
     public ResponseEntity<UserManagementDTO> toggleVerification(@PathVariable UUID userId) {
         return ResponseEntity.ok(adminService.toggleUserVerification(userId));
+    }
+
+    @PostMapping("/users/{userId}/ban")
+    public ResponseEntity<Void> banUser(@PathVariable UUID userId, @RequestBody BanRequestDTO banRequest) {
+        adminService.banUser(userId, banRequest.getReason(), banRequest.getExpiresAt(), banRequest.getIpAddress());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/users/{userId}/unban")
+    public ResponseEntity<Void> unbanUser(@PathVariable UUID userId) {
+        adminService.unbanUser(userId);
+        return ResponseEntity.ok().build();
     }
 }

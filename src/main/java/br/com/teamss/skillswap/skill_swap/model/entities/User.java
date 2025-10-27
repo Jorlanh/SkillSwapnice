@@ -54,7 +54,10 @@ public class User {
     private String twoFactorSecret;
     
     @Column(name = "verified_badge")
-    private boolean verifiedBadge = false; // NOVO CAMPO ADICIONADO
+    private boolean verifiedBadge = false;
+
+    @Column(name = "banned")
+    private boolean banned = false;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonManagedReference
@@ -98,7 +101,7 @@ public class User {
     public User() {
     }
 
-    // Getters e Setters (EXISTENTES)...
+    // Getters e Setters
     public UUID getUserId() {
         return userId;
     }
@@ -291,12 +294,19 @@ public class User {
         this.messageIds = messageIds;
     }
     
-    // GETTER E SETTER PARA O NOVO CAMPO
     public boolean isVerifiedBadge() {
         return verifiedBadge;
     }
 
     public void setVerifiedBadge(boolean verifiedBadge) {
         this.verifiedBadge = verifiedBadge;
+    }
+
+    public boolean isBanned() {
+        return banned;
+    }
+
+    public void setBanned(boolean banned) {
+        this.banned = banned;
     }
 }

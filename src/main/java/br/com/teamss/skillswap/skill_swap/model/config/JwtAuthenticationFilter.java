@@ -1,5 +1,7 @@
 package br.com.teamss.skillswap.skill_swap.model.config;
 
+import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.JwtBlocklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,7 +16,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 
 @Component
@@ -23,12 +24,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final UserDetailsService userDetailsService;
     private final JwtTokenUtil jwtTokenUtil;
     private final JwtBlocklistService jwtBlocklistService;
+    private final UserRepository userRepository;
 
     @Autowired
-    public JwtAuthenticationFilter(UserDetailsService userDetailsService, JwtTokenUtil jwtTokenUtil, JwtBlocklistService jwtBlocklistService) {
+    public JwtAuthenticationFilter(UserDetailsService userDetailsService, JwtTokenUtil jwtTokenUtil,
+                                   JwtBlocklistService jwtBlocklistService, UserRepository userRepository) {
         this.userDetailsService = userDetailsService;
         this.jwtTokenUtil = jwtTokenUtil;
         this.jwtBlocklistService = jwtBlocklistService;
+        this.userRepository = userRepository;
     }
 
     @Override
@@ -56,6 +60,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+            User user = userRepository.findByUsername(username).orElse(null);
+            if (user != null && user.isBanned()) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN, "Usuário banido.");
+                return;
+            }
+
             if (jwtTokenUtil.validateToken(jwt, userDetails)) {
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails, null, userDetails.getAuthorities());
