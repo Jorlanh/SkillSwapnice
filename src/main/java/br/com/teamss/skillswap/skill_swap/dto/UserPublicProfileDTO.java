@@ -6,6 +6,7 @@ import java.util.Set;
 public record UserPublicProfileDTO(
     String username,
     String name,
+    boolean verifiedBadge, // NOVO CAMPO
     ProfileDTO profile,
     Set<SkillDTO> skills
 ) {}

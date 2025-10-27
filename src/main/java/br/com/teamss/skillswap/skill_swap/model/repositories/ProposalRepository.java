@@ -18,4 +18,6 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
     // MÉTODO A ADICIONAR
     @Query("SELECT COUNT(p) FROM Proposal p WHERE p.status = :status AND (p.sender.userId = :userId OR p.receiver.userId = :userId)")
     long countByStatusAndParticipant(@Param("status") String status, @Param("userId") UUID userId);
+
+    long countByStatus(String status);
 }

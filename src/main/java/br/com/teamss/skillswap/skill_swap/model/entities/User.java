@@ -52,6 +52,9 @@ public class User {
 
     @Column(name = "two_factor_secret")
     private String twoFactorSecret;
+    
+    @Column(name = "verified_badge")
+    private boolean verifiedBadge = false; // NOVO CAMPO ADICIONADO
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     @JsonManagedReference
@@ -95,7 +98,7 @@ public class User {
     public User() {
     }
 
-    // Getters e Setters
+    // Getters e Setters (EXISTENTES)...
     public UUID getUserId() {
         return userId;
     }
@@ -286,5 +289,14 @@ public class User {
 
     public void setMessageIds(List<UUID> messageIds) {
         this.messageIds = messageIds;
+    }
+    
+    // GETTER E SETTER PARA O NOVO CAMPO
+    public boolean isVerifiedBadge() {
+        return verifiedBadge;
+    }
+
+    public void setVerifiedBadge(boolean verifiedBadge) {
+        this.verifiedBadge = verifiedBadge;
     }
 }

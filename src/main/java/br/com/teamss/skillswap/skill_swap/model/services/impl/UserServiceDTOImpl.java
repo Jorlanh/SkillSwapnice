@@ -76,7 +76,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     @Transactional(readOnly = true)
     public List<UserSummaryDTO> findAllSummaries() {
         return userRepository.findAll().stream()
-                .map(user -> new UserSummaryDTO(user.getUsername(), user.getName()))
+                .map(user -> new UserSummaryDTO(user.getUsername(), user.getName(), user.isVerifiedBadge()))
                 .collect(Collectors.toList());
     }
 
@@ -93,7 +93,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     public UserSummaryDTO findSummaryByIdDTO(UUID id) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
-        return new UserSummaryDTO(user.getUsername(), user.getName());
+        return new UserSummaryDTO(user.getUsername(), user.getName(), user.isVerifiedBadge());
     }
 
     @Override
@@ -173,7 +173,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
             .map(skill -> new SkillDTO(skill.getSkillId(), skill.getName(), skill.getDescription(), skill.getCategory(), skill.getLevel()))
             .collect(Collectors.toSet());
 
-        return new UserPublicProfileDTO(user.getUsername(), user.getName(), profileDTO, skills);
+        return new UserPublicProfileDTO(user.getUsername(), user.getName(), user.isVerifiedBadge(), profileDTO, skills);
     }
 
     @Override
@@ -197,7 +197,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
         return new UserPrivateProfileDTO(
             user.getUserId(), user.getUsername(), user.getEmail(), user.getName(),
-            profileDTO, skills, roles
+            user.isVerifiedBadge(), profileDTO, skills, roles
         );
     }
 

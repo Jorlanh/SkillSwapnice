@@ -6,16 +6,25 @@ public class UserSummaryDTO {
 
     private String username;
     private String name;
+    private boolean verifiedBadge; // NOVO CAMPO
+
+    public UserSummaryDTO(String username, String name, boolean verifiedBadge) {
+        this.username = username;
+        this.name = name;
+        this.verifiedBadge = verifiedBadge;
+    }
 
     public UserSummaryDTO(String username, String name) {
         this.username = username;
         this.name = name;
+        this.verifiedBadge = false; // Valor padrão
     }
     
     // Construtor antigo mantido para retrocompatibilidade interna, se necessário, mas não para exposição.
     public UserSummaryDTO(UUID userId, String username, String name) {
         this.username = username;
         this.name = name;
+        this.verifiedBadge = false;
     }
 
     public String getUsername() {
@@ -33,4 +42,7 @@ public class UserSummaryDTO {
     public void setName(String name) {
         this.name = name;
     }
+
+    public boolean isVerifiedBadge() { return verifiedBadge; }
+    public void setVerifiedBadge(boolean verifiedBadge) { this.verifiedBadge = verifiedBadge; }
 }

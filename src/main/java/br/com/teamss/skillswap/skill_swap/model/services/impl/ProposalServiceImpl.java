@@ -44,6 +44,9 @@ public class ProposalServiceImpl implements ProposalService {
     @Autowired
     private AchievementService achievementService;
 
+    // NOVO: Constante para o número de trocas necessárias para verificação
+    private static final long VERIFICATION_THRESHOLD = 100;
+
     @Override
     public Proposal sendProposal(ProposalRequestDTO proposalRequest) {
         User sender = userRepository.findById(proposalRequest.getSenderId())
@@ -85,7 +88,6 @@ public class ProposalServiceImpl implements ProposalService {
         
         return proposals.stream().map(proposal -> {
             ProposalResponseDTO dto = new ProposalResponseDTO();
-            // CORREÇÃO APLICADA AQUI
             dto.setProposalId(proposal.getProposalId());
             dto.setSender(new UserSummaryDTO(proposal.getSender().getUsername(), proposal.getSender().getName()));
             dto.setReceiver(new UserSummaryDTO(proposal.getReceiver().getUsername(), proposal.getReceiver().getName()));
@@ -216,10 +218,29 @@ public class ProposalServiceImpl implements ProposalService {
         sendNotification(proposal.getSender(), proposal.getSender().getEmail(), "Troca Concluída! Hora de avaliar.", message);
         sendNotification(proposal.getReceiver(), proposal.getReceiver().getEmail(), "Troca Concluída! Hora de avaliar.", message);
 
+        // Lógica de conquistas e verificação automática
+        checkAutomaticVerification(proposal.getSender());
+        checkAutomaticVerification(proposal.getReceiver());
         achievementService.checkAndUnlockAchievements(proposal.getSender());
         achievementService.checkAndUnlockAchievements(proposal.getReceiver());
 
         return proposalRepository.save(proposal);
+    }
+
+    private void checkAutomaticVerification(User user) {
+        if (user.isVerifiedBadge()) {
+            return;
+        }
+
+        long completedTrades = proposalRepository.countByStatusAndParticipant("COMPLETED", user.getUserId());
+        
+        if (completedTrades >= VERIFICATION_THRESHOLD) {
+            user.setVerifiedBadge(true);
+            userRepository.save(user);
+
+            String message = "Congratulations, voce completou 100 trocas de habilidades, e ganhou o selo de verificado da plataforma.";
+            sendNotification(user, user.getEmail(), "Você é um usuário verificado!", message);
+        }
     }
 
     private void sendNotification(User userToNotify, String email, String subject, String message) {

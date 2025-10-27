@@ -9,6 +9,7 @@ public record UserPrivateProfileDTO(
     String username,
     String email,
     String name,
+    boolean verifiedBadge, // NOVO CAMPO
     ProfileDTO profile,
     Set<SkillDTO> skills,
     Set<String> roles
