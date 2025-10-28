@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.HashSet;
 
 @Entity
 @Table(name = "tb_users")
@@ -42,61 +43,72 @@ public class User {
     private Instant verificationCodeExpiry;
 
     @Column(name = "verified")
-    private Boolean verified;
+    private Boolean verified = false; // Valor padrão explícito
 
     @Column(name = "verified_at")
     private Instant verifiedAt;
 
     @Column(name = "created_at")
-    private Instant createdAt;
+    private Instant createdAt = Instant.now(); // Valor padrão explícito
 
     @Column(name = "two_factor_secret")
     private String twoFactorSecret;
-    
+
     @Column(name = "verified_badge")
     private boolean verifiedBadge = false;
 
     @Column(name = "banned")
     private boolean banned = false;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    // --- START: Accessibility Settings ---
+    @Column(name = "libras_avatar_enabled", columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private boolean librasAvatarEnabled = false;
+
+    @Column(name = "preferred_theme", length = 50, columnDefinition = "VARCHAR(50) DEFAULT 'default'")
+    private String preferredTheme = "default"; // e.g., "default", "high-contrast-dark", "high-contrast-light"
+    // --- END: Accessibility Settings ---
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY) // FetchType LAZY é geralmente melhor para OneToOne
     @JsonManagedReference
     private Profile profile;
 
-    @ManyToMany(fetch = FetchType.EAGER)
+    @ManyToMany(fetch = FetchType.EAGER) // Manter EAGER se roles são frequentemente necessários com o usuário
     @JoinTable(name = "tb_user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-    private Set<Role> roles;
+    private Set<Role> roles = new HashSet<>(); // Inicializar coleções
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "tb_user_skills", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "skill_id"))
-    private Set<Skill> skills;
+    private Set<Skill> skills = new HashSet<>(); // Inicializar coleções
 
-    @ElementCollection
-    @Column(name = "following_ids")
-    private List<UUID> followingIds = new ArrayList<>();
+    @ElementCollection(fetch = FetchType.LAZY) // Usar LAZY para coleções
+    @CollectionTable(name = "tb_user_following", joinColumns = @JoinColumn(name = "user_id")) // Nome de tabela mais claro
+    @Column(name = "following_id")
+    private List<UUID> followingIds = new ArrayList<>(); // Inicializar coleções
 
-    @ElementCollection
-    @Column(name = "community_ids")
-    private List<UUID> communityIds = new ArrayList<>();
+    @ElementCollection(fetch = FetchType.LAZY) // Usar LAZY para coleções
+    @CollectionTable(name = "tb_user_communities", joinColumns = @JoinColumn(name = "user_id")) // Nome de tabela mais claro
+    @Column(name = "community_id")
+    private List<UUID> communityIds = new ArrayList<>(); // Inicializar coleções
 
-    @Column(name = "bio")
+    @Column(name = "bio", length = 500) // Limitar tamanho do bio
     private String bio;
 
-    @Column(name = "country")
+    @Column(name = "country", length = 100) // Limitar tamanho
     private String country;
 
-    @Column(name = "city")
+    @Column(name = "city", length = 100) // Limitar tamanho
     private String city;
 
-    @Column(name = "state")
+    @Column(name = "state", length = 100) // Limitar tamanho
     private String state;
 
-    @Column(name = "followers")
+    @Column(name = "followers", columnDefinition = "INT DEFAULT 0") // Valor padrão explícito
     private int followers = 0;
 
-    @ElementCollection
-    @Column(name = "message_ids")
-    private List<UUID> messageIds = new ArrayList<>();
+    @ElementCollection(fetch = FetchType.LAZY) // Usar LAZY para coleções
+    @CollectionTable(name = "tb_user_messages", joinColumns = @JoinColumn(name = "user_id")) // Nome de tabela mais claro
+    @Column(name = "message_id")
+    private List<UUID> messageIds = new ArrayList<>(); // Inicializar coleções
 
     public User() {
     }
@@ -219,7 +231,7 @@ public class User {
     }
 
     public void setRoles(Set<Role> roles) {
-        this.roles = roles;
+        this.roles = (roles != null) ? roles : new HashSet<>(); // Garantir inicialização
     }
 
     public Set<Skill> getSkills() {
@@ -227,7 +239,7 @@ public class User {
     }
 
     public void setSkills(Set<Skill> skills) {
-        this.skills = skills;
+        this.skills = (skills != null) ? skills : new HashSet<>(); // Garantir inicialização
     }
 
     public List<UUID> getFollowingIds() {
@@ -235,7 +247,7 @@ public class User {
     }
 
     public void setFollowingIds(List<UUID> followingIds) {
-        this.followingIds = followingIds;
+        this.followingIds = (followingIds != null) ? followingIds : new ArrayList<>(); // Garantir inicialização
     }
 
     public List<UUID> getCommunityIds() {
@@ -243,7 +255,7 @@ public class User {
     }
 
     public void setCommunityIds(List<UUID> communityIds) {
-        this.communityIds = communityIds;
+        this.communityIds = (communityIds != null) ? communityIds : new ArrayList<>(); // Garantir inicialização
     }
 
     public String getBio() {
@@ -291,9 +303,9 @@ public class User {
     }
 
     public void setMessageIds(List<UUID> messageIds) {
-        this.messageIds = messageIds;
+        this.messageIds = (messageIds != null) ? messageIds : new ArrayList<>(); // Garantir inicialização
     }
-    
+
     public boolean isVerifiedBadge() {
         return verifiedBadge;
     }
@@ -308,5 +320,37 @@ public class User {
 
     public void setBanned(boolean banned) {
         this.banned = banned;
+    }
+
+    // --- START: Accessibility Settings Getters/Setters ---
+    public boolean isLibrasAvatarEnabled() {
+        return librasAvatarEnabled;
+    }
+
+    public void setLibrasAvatarEnabled(boolean librasAvatarEnabled) {
+        this.librasAvatarEnabled = librasAvatarEnabled;
+    }
+
+    public String getPreferredTheme() {
+        return preferredTheme;
+    }
+
+    public void setPreferredTheme(String preferredTheme) {
+        this.preferredTheme = preferredTheme;
+    }
+    // --- END: Accessibility Settings Getters/Setters ---
+
+    // --- equals() and hashCode() based on userId (Opcional, mas recomendado) ---
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        User user = (User) o;
+        return userId != null && userId.equals(user.userId);
+    }
+
+    @Override
+    public int hashCode() {
+        return userId != null ? userId.hashCode() : 0;
     }
 }

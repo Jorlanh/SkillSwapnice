@@ -27,11 +27,12 @@ public class WebConfig implements WebMvcConfigurer {
         return source;
     }
 
+    // --- ESTES BEANS DEVEM PERMANECER AQUI ---
     @Bean
     public LocaleResolver localeResolver() {
         SessionLocaleResolver slr = new SessionLocaleResolver();
         // Define o idioma padrão, caso não seja possível detectar o do navegador
-        slr.setDefaultLocale(new Locale("pt", "BR")); 
+        slr.setDefaultLocale(new Locale("pt", "BR"));
         return slr;
     }
 
@@ -42,11 +43,14 @@ public class WebConfig implements WebMvcConfigurer {
         lci.setParamName("lang");
         return lci;
     }
+    // --- FIM DOS BEANS i18n ---
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(localeChangeInterceptor());
+        // --- REGISTRO DOS INTERCEPTORS ---
+        registry.addInterceptor(localeChangeInterceptor()); // Garanta que este esteja aqui
         registry.addInterceptor(rateLimitInterceptor)
                 .addPathPatterns("/api/login", "/api/password-reset/**");
+        // --- FIM DO REGISTRO ---
     }
 }

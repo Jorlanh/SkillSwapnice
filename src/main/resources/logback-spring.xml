@@ -16,11 +16,15 @@
         <encoder>
             <Pattern>%d %p %c{1} [%t] %m%n</Pattern>
         </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+        <!-- Correção: Usar SizeAndTimeBasedRollingPolicy diretamente -->
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${LOGS}/archived/skill-swap-%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                <maxFileSize>10MB</maxFileSize>
-            </timeBasedFileNamingAndTriggeringPolicy>
+            <!-- Definir maxFileSize diretamente dentro desta policy -->
+            <maxFileSize>10MB</maxFileSize>
+            <!-- Opcional: Limitar o tamanho total dos arquivos arquivados -->
+            <!-- <totalSizeCap>1GB</totalSizeCap> -->
+            <!-- Opcional: Manter arquivos por X dias -->
+            <maxHistory>30</maxHistory>
         </rollingPolicy>
     </appender>
 
@@ -36,7 +40,7 @@
     <logger name="security-audit" level="INFO" additivity="false">
         <appender-ref ref="SecurityAuditFile" />
     </logger>
-    
+
     <root level="INFO">
         <appender-ref ref="RollingFile" />
         <appender-ref ref="Console" />
