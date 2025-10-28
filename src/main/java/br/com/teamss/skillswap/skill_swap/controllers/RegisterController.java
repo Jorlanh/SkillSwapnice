@@ -14,6 +14,7 @@ import java.security.SecureRandom;
 import java.sql.Date;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.Period;
 import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.UUID;
@@ -52,6 +53,15 @@ public class RegisterController {
         }
         if (userRepository.existsByUsername(registerDTO.getUsername())) {
             return ResponseEntity.badRequest().body(new ErrorResponse("Nome de usuário já registrado."));
+        }
+
+        LocalDate birthDate = registerDTO.getBirthDate();
+        if (birthDate != null) {
+            if (Period.between(birthDate, LocalDate.now()).getYears() < 16) {
+                return ResponseEntity.badRequest().body(new ErrorResponse("Você deve ter pelo menos 16 anos para se registrar."));
+            }
+        } else {
+            return ResponseEntity.badRequest().body(new ErrorResponse("A data de nascimento é obrigatória."));
         }
 
         User user = new User();
