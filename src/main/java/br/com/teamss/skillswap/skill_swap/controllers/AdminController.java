@@ -12,7 +12,9 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/console-management")
-@PreAuthorize("hasRole('ADMIN')")
+// ALTERAÇÃO PRINCIPAL: Protege todos os endpoints neste controller.
+// Apenas tokens com a permissão "manage:console" poderão aceder.
+@PreAuthorize("hasAuthority('manage:console')")
 public class AdminController {
 
     private final AdminService adminService;
