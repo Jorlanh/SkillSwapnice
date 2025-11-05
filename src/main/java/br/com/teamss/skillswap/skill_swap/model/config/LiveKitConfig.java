@@ -21,6 +21,7 @@ public class LiveKitConfig {
     @Bean
     public RoomServiceClient roomServiceClient() {
         // CORREÇÃO: O construtor é privado, usa-se o Builder.
+        // (Este código já está correto para a API 1.5.x)
         return new RoomServiceClient.Builder()
                 .withUrl(livekitUrl)
                 .withApiKey(livekitApiKey)

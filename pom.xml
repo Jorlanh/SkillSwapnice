@@ -22,8 +22,12 @@
         <lombok.version>1.18.34</lombok.version>
         <spring-cloud-gcp.version>5.5.0</spring-cloud-gcp.version>
         <opensearch.version>2.10.0</opensearch.version>
-        <!-- VERSÃO CORRETA DO LIVEKIT (Maven Central) -->
-        <livekit.version>0.10.1</livekit.version>
+        
+        <!--
+          CORREÇÃO: A versão 0.10.1 era muito antiga.
+          A versão moderna (que usa .Builder) é 1.5.1 (ou mais recente).
+        -->
+        <livekit.version>1.5.1</livekit.version>
     </properties>
 
     <!-- REMOVIDO: repositórios do GitHub (não funcionam sem token) -->
@@ -109,11 +113,15 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- LIVEKIT SERVER SDK (CORRETO) -->
+        <!-- 
+          LIVEKIT SERVER SDK (CORRETO)
+          CORREÇÃO: O artifactId mudou para 'server-sdk' e a versão foi atualizada.
+        -->
+        <!-- https://mvnrepository.com/artifact/io.livekit/livekit-server -->
         <dependency>
             <groupId>io.livekit</groupId>
             <artifactId>livekit-server</artifactId>
-            <version>${livekit.version}</version>
+            <version>0.10.1</version>
         </dependency>
 
         <!-- Google Cloud -->

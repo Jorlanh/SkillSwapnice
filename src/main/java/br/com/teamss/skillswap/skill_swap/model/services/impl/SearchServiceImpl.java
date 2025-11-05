@@ -13,6 +13,10 @@ import org.opensearch.client.java.core.search.TotalHits;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch._types.SortOptions;
 import org.opensearch.client.opensearch._types.SortOrder;
+
+// **** IMPORT ADICIONADO PARA CORRIGIR O ERRO ****
+import org.opensearch.client.opensearch._types.mapping.FieldType; 
+
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -69,7 +73,10 @@ public class SearchServiceImpl implements SearchService {
             // CORREÇÃO: Encapsula a lambda em SortOptions.of()
             sortOptions.add(SortOptions.of(s -> s.field(f -> f.field("createdAt") // Campo de data
                                              .order(SortOrder.Desc)
-                                             .unmappedType("long") // Trata docs sem 'createdAt' (ex: 'users')
+                                             
+                                             // **** ESTA É A LINHA CORRIGIDA ****
+                                             .unmappedType(FieldType.Long) // Trata docs sem 'createdAt' (ex: 'users')
+                                             
                                              .missing("_last") // Coloca valores nulos/ausentes no final
             )));
             // Desempate por relevância (score)
