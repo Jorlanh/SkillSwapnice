@@ -20,7 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <lombok.version>1.18.34</lombok.version>
-        <spring-cloud-gcp.version>5.5.0</spring-cloud-gcp.version>
+        <spring-cloud-gcp.version>7.4.1</spring-cloud-gcp.version>
         <opensearch.version>2.10.0</opensearch.version>
         <!-- VERSÃO CORRETA DO LIVEKIT (Maven Central) -->
         <livekit.version>0.10.1</livekit.version>
