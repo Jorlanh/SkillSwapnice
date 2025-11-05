@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,11 +22,8 @@ import io.livekit.server.VideoGrant;
 @RequestMapping("/api/video")
 public class VideoController {
 
-    @Autowired
-    private UserServiceDTO userServiceDTO;
-
-    // Injetado do LiveKitConfig
-    private RoomServiceClient roomServiceClient;
+    private final UserServiceDTO userServiceDTO;
+    private final RoomServiceClient roomServiceClient;
 
     @Value("${livekit.api.key}")
     private String livekitApiKey;
@@ -35,56 +31,55 @@ public class VideoController {
     @Value("${livekit.api.secret}")
     private String livekitApiSecret;
 
-    // CORREÇÃO: Removido @Autowired desnecessário. O Spring injeta automaticamente
-    // construtores únicos.
+    // ✅ O Spring injeta automaticamente pelo construtor
     public VideoController(UserServiceDTO userServiceDTO, RoomServiceClient roomServiceClient) {
         this.userServiceDTO = userServiceDTO;
         this.roomServiceClient = roomServiceClient;
     }
 
     /**
-     * Endpoint para o cliente (Angular) solicitar um token para entrar em uma sala de vídeo.
+     * Endpoint para gerar o token de acesso ao LiveKit.
+     * O cliente (ex: Angular) chama este endpoint ao entrar em uma sala.
      */
     @PostMapping("/join-room")
-    @PreAuthorize("isAuthenticated()") // Garante que o usuário está logado
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> getJoinToken(@RequestBody Map<String, String> request) {
         String roomName = request.get("roomName");
         if (roomName == null || roomName.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "roomName é obrigatório."));
         }
 
-        // 1. Pega o usuário autenticado (via OAuth 2.0)
+        // Pega o usuário autenticado via UserServiceDTO
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
 
-        // 2. CORREÇÃO: A API do LiveKit 1.5.0 usa um Builder para o VideoGrant.
-        // Você não pode usar 'new VideoGrant()'.
-        VideoGrant.Builder grantBuilder = new VideoGrant.Builder();
-        grantBuilder.setRoom(roomName);
-        grantBuilder.setRoomJoin(true);
-        grantBuilder.setCanPublish(true); // Pode ligar a câmera/microfone
-        grantBuilder.setCanSubscribe(true); // Pode ver/ouvir os outros
-        grantBuilder.setCanPublishData(true); // Pode usar o datachannel (chat da sala)
-        grantBuilder.setCanPublishSources(List.of("camera", "microphone", "screen_share")); // Permite compartilhar tela
-        grantBuilder.setHidden(false);
+        try {
+            // ✅ Criação direta do VideoGrant (sem builder)
+            VideoGrant videoGrant = new VideoGrant();
+            videoGrant.setRoom(roomName);
+            videoGrant.setRoomJoin(true);
+            videoGrant.setCanPublish(true);
+            videoGrant.setCanSubscribe(true);
+            videoGrant.setCanPublishData(true);
+            videoGrant.setCanPublishSources(List.of("camera", "microphone", "screen_share"));
+            videoGrant.setHidden(false);
 
-        // Agora, construa o objeto VideoGrant a partir do builder
-        VideoGrant videoGrant = grantBuilder.build();
+            // ✅ Cria o AccessToken e adiciona o grant
+            AccessToken token = new AccessToken(livekitApiKey, livekitApiSecret)
+                    .setIdentity(authenticatedUser.getUserId().toString())
+                    .setName(authenticatedUser.getUsername())
+                    .setTtl(Duration.ofHours(1))
+                    .addGrant(videoGrant);
 
-        // 3. O seu código para o AccessToken.Builder já estava correto.
-        // Os erros "cannot be resolved" eram provavelmente um efeito cascata
-        // dos erros anteriores do VideoGrant.
-        AccessToken.Builder builder = new AccessToken.Builder()
-                .withApiKey(livekitApiKey)
-                .withApiSecret(livekitApiSecret)
-                .withIdentity(authenticatedUser.getUserId().toString())
-                .withName(authenticatedUser.getUsername())
-                .withTtl(Duration.ofHours(1)) // Define a duração
-                .withGrant(videoGrant); // Adiciona as permissões (o objeto VideoGrant construído)
+            // ✅ Gera o JWT
+            String jwt = token.toJwt();
 
-        // 4. Constroí o token
-        AccessToken token = builder.build();
+            // Retorna o token JWT para o cliente
+            return ResponseEntity.ok(Map.of("token", jwt));
 
-        // 5. Retorna o token JWT (do LiveKit) para o cliente
-        return ResponseEntity.ok(Map.of("token", token.toJwt()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "error", "Falha ao gerar token: " + e.getMessage()
+            ));
+        }
     }
 }

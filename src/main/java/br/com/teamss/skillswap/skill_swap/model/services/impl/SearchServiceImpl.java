@@ -1,28 +1,28 @@
 package br.com.teamss.skillswap.skill_swap.model.services.impl;
 
-import br.com.teamss.skillswap.skill_swap.dto.SearchResultDTO;
-import br.com.teamss.skillswap.skill_swap.model.services.SearchService;
-import com.fasterxml.jackson.databind.JsonNode;
-// ADICIONADO: IMPORTS DO OPENSEARCH
-import org.opensearch.client.java.OpenSearchClient;
-import org.opensearch.client.java.core.DeleteRequest;
-import org.opensearch.client.java.core.IndexRequest;
-import org.opensearch.client.java.core.SearchRequest;
-import org.opensearch.client.java.core.search.Hit;
-import org.opensearch.client.java.core.search.TotalHits;
-import org.opensearch.client.opensearch._types.query_dsl.Query;
-import org.opensearch.client.opensearch._types.SortOptions;
-import org.opensearch.client.opensearch._types.SortOrder;
-
-// **** IMPORT ADICIONADO PARA CORRIGIR O ERRO ****
-import org.opensearch.client.opensearch._types.mapping.FieldType; 
-
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.opensearch.client.opensearch.OpenSearchClient;
+import org.opensearch.client.opensearch._types.FieldValue;
+import org.opensearch.client.opensearch._types.SortOptions;
+import org.opensearch.client.opensearch._types.SortOrder;
+import org.opensearch.client.opensearch._types.mapping.FieldType;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.opensearch.core.DeleteRequest;
+import org.opensearch.client.opensearch.core.IndexRequest;
+import org.opensearch.client.opensearch.core.SearchRequest;
+import org.opensearch.client.opensearch.core.SearchResponse;
+import org.opensearch.client.opensearch.core.search.Hit;
+import org.opensearch.client.opensearch.core.search.TotalHits;
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+
+import br.com.teamss.skillswap.skill_swap.dto.SearchResultDTO;
+import br.com.teamss.skillswap.skill_swap.model.services.SearchService;
 
 @Service
 public class SearchServiceImpl implements SearchService {
@@ -63,37 +63,33 @@ public class SearchServiceImpl implements SearchService {
         );
 
         SearchRequest.Builder requestBuilder = new SearchRequest.Builder()
-            .index(indicesToSearch) // CORREÇÃO: .index() em vez de .indices()
+            .index(indicesToSearch)
             .query(multiMatchQuery);
 
-        // **LÓGICA DE ORDENAÇÃO COMPLETA E CORRIGIDA**
+        // Lógica de ordenação
         List<SortOptions> sortOptions = new ArrayList<>();
         if ("DATE".equalsIgnoreCase(sortBy)) {
-            // Sorteio principal por data (mais recente primeiro)
-            // CORREÇÃO: Encapsula a lambda em SortOptions.of()
-            sortOptions.add(SortOptions.of(s -> s.field(f -> f.field("createdAt") // Campo de data
-                                             .order(SortOrder.Desc)
-                                             
-                                             // **** ESTA É A LINHA CORRIGIDA ****
-                                             .unmappedType(FieldType.Long) // Trata docs sem 'createdAt' (ex: 'users')
-                                             
-                                             .missing("_last") // Coloca valores nulos/ausentes no final
+            // Ordena por data (mais recentes primeiro)
+            sortOptions.add(SortOptions.of(s -> s.field(f -> f
+                .field("createdAt")
+                .order(SortOrder.Desc)
+                .unmappedType(FieldType.Long)
+                .missing(FieldValue.of("_last")) // CORRIGIDO
             )));
             // Desempate por relevância (score)
             sortOptions.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
-            
-        } else { // Padrão é "RELEVANCE"
-            // Sorteio principal por relevância (score)
+        } else {
+            // Padrão: relevância
             sortOptions.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
         }
-        // Desempate final por ID para garantir ordem consistente em todos os casos
-        sortOptions.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Asc))));
-        
-        requestBuilder.sort(sortOptions);
-        // **FIM DA LÓGICA DE ORDENAÇÃO**
 
+        // Desempate final por ID
+        sortOptions.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Asc))));
+        requestBuilder.sort(sortOptions);
+
+        // Executa a busca
         SearchRequest searchRequest = requestBuilder.build();
-        var response = client.search(searchRequest, JsonNode.class);
+        SearchResponse<JsonNode> response = client.search(searchRequest, JsonNode.class);
 
         TotalHits total = response.hits().total();
         if (total == null || total.value() == 0) {
@@ -117,21 +113,27 @@ public class SearchServiceImpl implements SearchService {
         String description = "";
         String imageUrl = "";
 
-        if ("user".equals(type)) {
-            title = source.has("username") ? source.get("username").asText() : "";
-            description = source.has("bio") ? source.get("bio").asText() : "";
-            imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : ""; 
-        } else if ("post".equals(type)) {
-            title = source.has("title") ? source.get("title").asText() : "";
-            description = source.has("content") ? source.get("content").asText() : "";
-            imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : "";
-        } else if ("community".equals(type)) {
-            title = source.has("name") ? source.get("name").asText() : "";
-            description = source.has("description") ? source.get("description").asText() : "";
+        switch (type) {
+            case "user":
+                title = source.has("username") ? source.get("username").asText() : "";
+                description = source.has("bio") ? source.get("bio").asText() : "";
+                imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : "";
+                break;
+            case "post":
+                title = source.has("title") ? source.get("title").asText() : "";
+                description = source.has("content") ? source.get("content").asText() : "";
+                imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : "";
+                break;
+            case "community":
+                title = source.has("name") ? source.get("name").asText() : "";
+                description = source.has("description") ? source.get("description").asText() : "";
+                break;
         }
 
-        // CORREÇÃO: Trata score nulo
-        double score = (hit.score() != null) ? hit.score() : 0.0;
+        // Corrigido: evitar auto-unboxing nulo
+        Double scoreObj = hit.score();
+        double score = (scoreObj != null) ? scoreObj.doubleValue() : 0.0;
+
         return new SearchResultDTO(id, type, title, description, imageUrl, score);
     }
 
@@ -142,7 +144,7 @@ public class SearchServiceImpl implements SearchService {
         return "unknown";
     }
 
-    // --- MÉTODOS DE SINCRONIZAÇÃO (CHAMADOS PELA ETAPA 3) ---
+    // --- Métodos de sincronização ---
 
     @Override
     public <T> void indexDocument(String indexName, String docId, T document) throws IOException {
