@@ -4,6 +4,7 @@ import br.com.teamss.skillswap.skill_swap.dto.ProposalRequestDTO;
 import br.com.teamss.skillswap.skill_swap.dto.ProposalResponseDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
 import br.com.teamss.skillswap.skill_swap.dto.UserSummaryDTO;
+import br.com.teamss.skillswap.skill_swap.events.ProposalCompletedEvent; // ADICIONADO
 import br.com.teamss.skillswap.skill_swap.model.entities.Notification;
 import br.com.teamss.skillswap.skill_swap.model.entities.Proposal;
 import br.com.teamss.skillswap.skill_swap.model.entities.Skill;
@@ -18,6 +19,7 @@ import br.com.teamss.skillswap.skill_swap.model.services.ProposalService;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher; // ADICIONADO
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
@@ -41,10 +43,16 @@ public class ProposalServiceImpl implements ProposalService {
     private EmailService emailService;
     @Autowired
     private UserServiceDTO userServiceDTO;
-    @Autowired
-    private AchievementService achievementService;
+    
+    // REMOVIDO (será movido para o Listener)
+    // @Autowired
+    // private AchievementService achievementService;
 
-    // NOVO: Constante para o número de trocas necessárias para verificação
+    // ADICIONADO
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
+    // Constante (já estava no seu arquivo)
     private static final long VERIFICATION_THRESHOLD = 100;
 
     @Override
@@ -214,34 +222,17 @@ public class ProposalServiceImpl implements ProposalService {
         proposal.setStatus("COMPLETED");
         proposal.setUpdatedAt(Instant.now());
 
-        String message = "A troca de habilidades foi concluída! Por favor, avalie a sua experiência para ajudar a comunidade.";
-        sendNotification(proposal.getSender(), proposal.getSender().getEmail(), "Troca Concluída! Hora de avaliar.", message);
-        sendNotification(proposal.getReceiver(), proposal.getReceiver().getEmail(), "Troca Concluída! Hora de avaliar.", message);
+        // Ação Síncrona: Salvar no banco (rápido e essencial)
+        Proposal savedProposal = proposalRepository.save(proposal);
 
-        // Lógica de conquistas e verificação automática
-        checkAutomaticVerification(proposal.getSender());
-        checkAutomaticVerification(proposal.getReceiver());
-        achievementService.checkAndUnlockAchievements(proposal.getSender());
-        achievementService.checkAndUnlockAchievements(proposal.getReceiver());
+        // Ação Assíncrona: Disparar o evento
+        // O resto (notificações, e-mails, conquistas) acontecerá em background.
+        eventPublisher.publishEvent(new ProposalCompletedEvent(this, savedProposal));
 
-        return proposalRepository.save(proposal);
+        return savedProposal;
     }
 
-    private void checkAutomaticVerification(User user) {
-        if (user.isVerifiedBadge()) {
-            return;
-        }
-
-        long completedTrades = proposalRepository.countByStatusAndParticipant("COMPLETED", user.getUserId());
-        
-        if (completedTrades >= VERIFICATION_THRESHOLD) {
-            user.setVerifiedBadge(true);
-            userRepository.save(user);
-
-            String message = "Congratulations, voce completou 100 trocas de habilidades, e ganhou o selo de verificado da plataforma.";
-            sendNotification(user, user.getEmail(), "Você é um usuário verificado!", message);
-        }
-    }
+    // REMOVIDO: checkAutomaticVerification (movido para o Listener)
 
     private void sendNotification(User userToNotify, String email, String subject, String message) {
         emailService.sendNotification(email, subject, message);
