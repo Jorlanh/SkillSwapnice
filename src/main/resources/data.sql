@@ -264,4 +264,4 @@ CREATE INDEX idx_reposts_post_id ON tb_reposts(post_id);
 CREATE INDEX idx_share_links_post_id ON tb_share_links(post_id);
 CREATE INDEX idx_two_factor_configs_user_id ON tb_two_factor_configs(user_id);
 CREATE INDEX idx_messages_sender_id ON tb_messages(sender_id);
-CREATE INDEX idx_messages_receiver_id ON tb_messages(receiver_id); */
+CREATE INDEX idx_messages_receiver_id ON tb_messages(receiver_id); - */
