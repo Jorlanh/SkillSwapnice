@@ -16,16 +16,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenSearchConfig {
 
-    @Value("${opensearch.host:localhost}")
+    // A configuração agora puxa estritamente do seu application.properties
+    @Value("${opensearch.host}")
     private String host;
 
-    @Value("${opensearch.port:9200}")
+    @Value("${opensearch.port}")
     private int port;
 
-    @Value("${opensearch.username:admin}")
+    @Value("${opensearch.username}")
     private String username;
 
-    @Value("${opensearch.password:admin}")
+    @Value("${opensearch.password}")
     private String password;
 
     @Bean

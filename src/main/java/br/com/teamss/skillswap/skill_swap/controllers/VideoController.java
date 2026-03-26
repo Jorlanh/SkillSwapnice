@@ -1,7 +1,5 @@
 package br.com.teamss.skillswap.skill_swap.controllers;
 
-import java.time.Duration;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -15,8 +13,9 @@ import org.springframework.web.bind.annotation.RestController;
 import br.com.teamss.skillswap.skill_swap.dto.UserDTO;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import io.livekit.server.AccessToken;
+import io.livekit.server.RoomJoin;
+import io.livekit.server.RoomName;
 import io.livekit.server.RoomServiceClient;
-import io.livekit.server.VideoGrant;
 
 @RestController
 @RequestMapping("/api/video")
@@ -31,7 +30,6 @@ public class VideoController {
     @Value("${livekit.api.secret}")
     private String livekitApiSecret;
 
-    // ✅ O Spring injeta automaticamente pelo construtor
     public VideoController(UserServiceDTO userServiceDTO, RoomServiceClient roomServiceClient) {
         this.userServiceDTO = userServiceDTO;
         this.roomServiceClient = roomServiceClient;
@@ -39,7 +37,7 @@ public class VideoController {
 
     /**
      * Endpoint para gerar o token de acesso ao LiveKit.
-     * O cliente (ex: Angular) chama este endpoint ao entrar em uma sala.
+     * O cliente (Angular) chama este endpoint ao entrar em uma sala.
      */
     @PostMapping("/join-room")
     @PreAuthorize("isAuthenticated()")
@@ -53,27 +51,23 @@ public class VideoController {
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
 
         try {
-            // ✅ Criação direta do VideoGrant (sem builder)
-            VideoGrant videoGrant = new VideoGrant();
-            videoGrant.setRoom(roomName);
-            videoGrant.setRoomJoin(true);
-            videoGrant.setCanPublish(true);
-            videoGrant.setCanSubscribe(true);
-            videoGrant.setCanPublishData(true);
-            videoGrant.setCanPublishSources(List.of("camera", "microphone", "screen_share"));
-            videoGrant.setHidden(false);
+            // Criação do Token. Parâmetros TTL podem ser adicionados isoladamente, se necessário.
+            // O padrão do SDK para expiração é de 6 horas caso não seja declarado.
+            AccessToken token = new AccessToken(livekitApiKey, livekitApiSecret);
+            
+            // Setters executados de forma sequencial, já que retornam tipo primitivo 'void'
+            token.setIdentity(authenticatedUser.getUserId().toString());
+            token.setName(authenticatedUser.getUsername());
+            
+            // Definição das permissões.
+            // Nota técnica: O objeto RoomJoin(true) concede, por default na arquitetura do LiveKit,
+            // as permissões de publicar e escutar (canPublish, canSubscribe) para a sala em questão.
+            token.addGrants(new RoomJoin(true), new RoomName(roomName));
 
-            // ✅ Cria o AccessToken e adiciona o grant
-            AccessToken token = new AccessToken(livekitApiKey, livekitApiSecret)
-                    .setIdentity(authenticatedUser.getUserId().toString())
-                    .setName(authenticatedUser.getUsername())
-                    .setTtl(Duration.ofHours(1))
-                    .addGrant(videoGrant);
-
-            // ✅ Gera o JWT
+            // Gera a assinatura criptográfica JWT
             String jwt = token.toJwt();
 
-            // Retorna o token JWT para o cliente
+            // Retorna o payload de autorização
             return ResponseEntity.ok(Map.of("token", jwt));
 
         } catch (Exception e) {

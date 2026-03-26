@@ -3,16 +3,17 @@ package br.com.teamss.skillswap.skill_swap.model.services.impl;
 import br.com.teamss.skillswap.skill_swap.dto.*;
 import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
 import br.com.teamss.skillswap.skill_swap.model.entities.Role;
-import br.com.teamss.skillswap.skill_swap.model.entities.Skill; // Importar Skill
+import br.com.teamss.skillswap.skill_swap.model.entities.Skill; 
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
-import br.com.teamss.skillswap.skill_swap.model.services.UserService; // Importar UserService
+import br.com.teamss.skillswap.skill_swap.model.services.UserService; 
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication; // Importar Authentication
+import org.springframework.security.core.Authentication; 
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,21 +27,20 @@ import java.util.stream.Collectors;
 @Service
 public class UserServiceDTOImpl implements UserServiceDTO {
 
-    // Injeção de dependências via construtor é preferível
     private final UserRepository userRepository;
-    private final UserService userService; // Injete a interface UserService
+    private final UserService userService;
 
-    @Autowired // Mantido Autowired como no original
+    @Autowired 
     public UserServiceDTOImpl(UserRepository userRepository, UserService userService) {
         this.userRepository = userRepository;
-        this.userService = userService; // Armazene a instância injetada
+        this.userService = userService; 
     }
 
     @Override
     @Transactional(readOnly = true)
     public UserDTO toUserDTO(User user) {
         if (user == null) {
-            return null; // Retornar null se o usuário for null
+            return null; 
         }
 
         ProfileDTO profileDTO = null;
@@ -61,7 +61,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
 
         Set<String> roles = (user.getRoles() != null) ? user.getRoles().stream()
                 .map(Role::getName)
-                .collect(Collectors.toSet()) : Collections.emptySet(); // Usar Collections.emptySet() para nulo
+                .collect(Collectors.toSet()) : Collections.emptySet();
 
         Set<SkillDTO> skills = (user.getSkills() != null) ? user.getSkills().stream()
                 .map(skill -> new SkillDTO(
@@ -71,9 +71,9 @@ public class UserServiceDTOImpl implements UserServiceDTO {
                         skill.getCategory(),
                         skill.getLevel()
                 ))
-                .collect(Collectors.toSet()) : Collections.emptySet(); // Usar Collections.emptySet() para nulo
+                .collect(Collectors.toSet()) : Collections.emptySet(); 
 
-        UserDTO userDTO = new UserDTO(); // Use construtor padrão e setters
+        UserDTO userDTO = new UserDTO(); 
         userDTO.setUserId(user.getUserId());
         userDTO.setUsername(user.getUsername());
         userDTO.setRoles(roles);
@@ -82,7 +82,7 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         userDTO.setEmail(user.getEmail());
         userDTO.setPhoneNumber(user.getPhoneNumber());
         userDTO.setTwoFactorSecret(user.getTwoFactorSecret());
-        userDTO.setVerificationCode(user.getVerificationCode()); // Manter se necessário
+        userDTO.setVerificationCode(user.getVerificationCode()); 
 
         // --- START: Accessibility Settings ---
         userDTO.setLibrasAvatarEnabled(user.isLibrasAvatarEnabled());
@@ -103,7 +103,6 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     @Override
     @Transactional(readOnly = true)
     public UserDTO findByIdDTO(UUID id) {
-        // Delegar busca para UserService para reutilizar a lógica de EntityNotFoundException
         User user = userService.findById(id);
         return toUserDTO(user);
     }
@@ -111,7 +110,6 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     @Override
     @Transactional(readOnly = true)
     public UserSummaryDTO findSummaryByIdDTO(UUID id) {
-        // Delegar busca para UserService
         User user = userService.findById(id);
         return new UserSummaryDTO(user.getUsername(), user.getName(), user.isVerifiedBadge());
     }
@@ -119,59 +117,47 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     @Override
     @Transactional
     public void updateVerificationCode(UUID userId, String code) {
-        // Delegar busca para UserService
         User user = userService.findById(userId);
         user.setVerificationCode(code);
-        // Opcional: definir expiração aqui também
-        userRepository.save(user); // Necessário salvar após modificação
+        userRepository.save(user);
     }
 
     @Override
     @Transactional
     public void updateVerificationStatus(UUID userId, boolean verified) {
-        // Delegar busca para UserService
         User user = userService.findById(userId);
         user.setVerified(verified);
         user.setVerifiedAt(verified ? Instant.now() : null);
-        if (verified) { // Limpar código e expiração ao verificar
+        if (verified) { 
             user.setVerificationCode(null);
             user.setVerificationCodeExpiry(null);
         }
-        userRepository.save(user); // Necessário salvar após modificação
+        userRepository.save(user); 
     }
 
-    /**
-     * @deprecated Use métodos de atualização mais específicos como updateAccessibilitySettingsDTO.
-     * Este método pode sobrescrever campos não intencionalmente.
-     */
     @Override
     @Deprecated
     @Transactional
     public void saveUserDTO(UserDTO userDTO) {
-        // Delegar busca para UserService
         User user = userService.findById(userDTO.getUserId());
 
-        // Atualização parcial - PERIGOSO se o DTO não estiver completo
         if(userDTO.getUsername() != null) user.setUsername(userDTO.getUsername());
         if(userDTO.getEmail() != null) user.setEmail(userDTO.getEmail());
-        // user.setName(userDTO.getName()); // Nome não está no DTO original
         if(userDTO.getPhoneNumber() != null) user.setPhoneNumber(userDTO.getPhoneNumber());
         if(userDTO.getTwoFactorSecret() != null) user.setTwoFactorSecret(userDTO.getTwoFactorSecret());
         if(userDTO.getVerificationCode() != null) user.setVerificationCode(userDTO.getVerificationCode());
 
-        // Atualizar acessibilidade
-        user.setLibrasAvatarEnabled(userDTO.isLibrasAvatarEnabled()); // Boolean atualiza sempre
+        user.setLibrasAvatarEnabled(userDTO.isLibrasAvatarEnabled()); 
         if(userDTO.getPreferredTheme() != null) user.setPreferredTheme(userDTO.getPreferredTheme());
 
-        // NÃO atualizar roles, skills, profile aqui - usar métodos específicos em UserService
-        userRepository.save(user); // Necessário salvar após modificação
+        userRepository.save(user); 
     }
 
 
     @Override
     @Transactional(readOnly = true)
     public UserDTO findByUsernameDTO(String username) {
-        User user = userRepository.findByUsername(username) // Busca direta pelo repositório é eficiente aqui
+        User user = userRepository.findByUsername(username) 
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado com username: " + username));
         return toUserDTO(user);
     }
@@ -180,25 +166,44 @@ public class UserServiceDTOImpl implements UserServiceDTO {
     @Transactional(readOnly = true)
     public UserDTO getAuthenticatedUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-         if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal() instanceof String && "anonymousUser".equals(authentication.getPrincipal())) {
-             throw new IllegalStateException("Nenhum usuário autenticado encontrado no contexto de segurança.");
-         }
-
-        String username;
-        Object principal = authentication.getPrincipal();
-        if (principal instanceof UserDetails) {
-            username = ((UserDetails) principal).getUsername();
-        } else {
-            username = principal.toString();
+        if (authentication == null || !authentication.isAuthenticated() || authentication.getPrincipal() instanceof String && "anonymousUser".equals(authentication.getPrincipal())) {
+            throw new IllegalStateException("Nenhum usuário autenticado encontrado no contexto de segurança.");
         }
 
-        // Buscar usuário pelo username garantido pela autenticação
-        User user = userRepository.findByUsername(username)
+        Object principal = authentication.getPrincipal();
+        User user;
+
+        // SE O TOKEN FOR DO AUTH0 (JWT)
+        if (principal instanceof Jwt) {
+            Jwt jwt = (Jwt) principal;
+            String email = jwt.getClaimAsString("email");
+            
+            if (email != null) {
+                user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado com o e-mail: " + email));
+            } else {
+                // Fallback de segurança caso o email não seja fornecido
+                String subject = jwt.getSubject();
+                user = userRepository.findByUsername(subject)
+                    .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado no banco de dados."));
+            }
+        } 
+        // SE FOR O SISTEMA ANTIGO DE SESSÃO LOCAL (UserDetails)
+        else if (principal instanceof UserDetails) {
+            String username = ((UserDetails) principal).getUsername();
+            user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado ('" + username + "') não encontrado na base de dados."));
+        } 
+        // CASO GENÉRICO
+        else {
+            String username = principal.toString();
+            user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado ('" + username + "') não encontrado na base de dados."));
+        }
+
         return toUserDTO(user);
     }
 
-    // NOVAS IMPLEMENTAÇÕES originais mantidas
     @Override
     @Transactional(readOnly = true)
     public UserPublicProfileDTO toUserPublicProfileDTO(User user) {
@@ -260,14 +265,10 @@ public class UserServiceDTOImpl implements UserServiceDTO {
         return toUserPublicProfileDTO(user);
     }
 
-    // --- START: Accessibility Settings Specific Update DTO Method Implementation ---
     @Override
-    @Transactional // Operação de escrita
+    @Transactional 
     public UserDTO updateAccessibilitySettingsDTO(UUID userId, boolean librasAvatarEnabled, String preferredTheme) {
-        // Delega a lógica de atualização para o UserService
         User updatedUser = userService.updateAccessibilitySettings(userId, librasAvatarEnabled, preferredTheme);
-        // Converte a entidade atualizada de volta para DTO
         return toUserDTO(updatedUser);
     }
-    // --- END: Accessibility Settings Specific Update DTO Method Implementation ---
 }

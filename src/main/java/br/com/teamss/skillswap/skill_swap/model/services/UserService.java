@@ -6,13 +6,13 @@ import java.util.UUID;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
 
 public interface UserService {
-    List<User> findAll(); // Assinatura original
-    User findById(UUID id); // Assinatura original
-    User save(User user); // Assinatura original
-    User addSkills(UUID id, List<Long> skillIds); // Assinatura original
-    User addRoles(UUID id, List<Long> roleIds); // Assinatura original
-    User update(UUID id, User user); // Assinatura original
-    void delete(UUID id); // Assinatura original
+    List<User> findAll(); 
+    User findById(UUID id); 
+    User save(User user); 
+    User addSkills(UUID id, List<Long> skillIds); 
+    User addRoles(UUID id, List<Long> roleIds); 
+    User update(UUID id, User user); 
+    void delete(UUID id); 
 
     // --- START: Accessibility Settings Specific Update ---
     /**
@@ -26,4 +26,3 @@ public interface UserService {
     User updateAccessibilitySettings(UUID userId, boolean librasAvatarEnabled, String preferredTheme);
     // --- END: Accessibility Settings Specific Update ---
 }
-

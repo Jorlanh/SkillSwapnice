@@ -8,24 +8,18 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class LiveKitConfig {
 
-    // Defina estas 3 variáveis no seu application.properties ou variáveis de ambiente
     @Value("${livekit.api.url}")
-    private String livekitUrl; // Ex: "http://localhost:7880"
+    private String livekitUrl; 
 
     @Value("${livekit.api.key}")
-    private String livekitApiKey; // Ex: "devkey"
+    private String livekitApiKey; 
 
     @Value("${livekit.api.secret}")
-    private String livekitApiSecret; // Ex: "secret"
+    private String livekitApiSecret; 
 
     @Bean
     public RoomServiceClient roomServiceClient() {
-        // CORREÇÃO: O construtor é privado, usa-se o Builder.
-        // (Este código já está correto para a API 1.5.x)
-        return new RoomServiceClient.Builder()
-                .withUrl(livekitUrl)
-                .withApiKey(livekitApiKey)
-                .withApiSecret(livekitApiSecret)
-                .build();
+        // Inicialização estática para o SDK Java do LiveKit
+        return RoomServiceClient.createClient(livekitUrl, livekitApiKey, livekitApiSecret);
     }
 }

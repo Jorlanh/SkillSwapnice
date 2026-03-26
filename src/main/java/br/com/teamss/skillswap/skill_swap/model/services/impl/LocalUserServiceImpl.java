@@ -60,7 +60,7 @@ public class LocalUserServiceImpl implements LocalUserService {
         // Define uma senha aleatória e inutilizável
         newUser.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         
-        newUser.setVerified(jwt.getClaimAsBoolean("email_verified")); // Pega a verificação direto do Auth0
+        newUser.setVerified(jwt.getClaimAsBoolean("email_verified") != null ? jwt.getClaimAsBoolean("email_verified") : false); 
         newUser.setVerifiedAt(Instant.now());
         newUser.setCreatedAt(Instant.now());
         

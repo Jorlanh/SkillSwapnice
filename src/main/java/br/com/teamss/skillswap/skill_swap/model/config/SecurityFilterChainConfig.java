@@ -13,6 +13,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationFilter; 
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
@@ -27,13 +29,25 @@ import br.com.teamss.skillswap.skill_swap.filters.BanCheckFilter;
 @EnableMethodSecurity
 public class SecurityFilterChainConfig {
 
-    @Value("${cors.allowed-origins:http://localhost:4200,https://skillswap-frontend-tmub.onrender.com}")
+    @Value("${cors.allowed-origins}")
     private String[] allowedOrigins;
 
     private final BanCheckFilter banCheckFilter; 
 
     public SecurityFilterChainConfig(BanCheckFilter banCheckFilter) {
         this.banCheckFilter = banCheckFilter;
+    }
+
+    // --- CONVERSOR DO AUTH0 ---
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
+        converter.setAuthoritiesClaimName("permissions"); // Lê as permissões do payload JWT do Auth0
+        converter.setAuthorityPrefix(""); 
+        
+        JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
+        jwtConverter.setJwtGrantedAuthoritiesConverter(converter);
+        return jwtConverter;
     }
 
     @Bean
@@ -67,7 +81,6 @@ public class SecurityFilterChainConfig {
             
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    // Seus endpoints públicos estão corretos
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
                     AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
@@ -80,12 +93,11 @@ public class SecurityFilterChainConfig {
                 .anyRequest().authenticated()
             )
             
-            // Configura o OAuth 2.0 Resource Server
-            .oauth2ResourceServer(oauth2 -> oauth2.jwt())
+            // Ativa o conversor JWT que criamos acima
+            .oauth2ResourceServer(oauth2 -> oauth2
+                .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
+            )
             
-            // 4. ADICIONA SEU FILTRO DE BANIMENTO
-            // Ele é adicionado DEPOIS do BearerTokenAuthenticationFilter,
-            // que é o filtro padrão que valida o token OAuth 2.0.
             .addFilterAfter(banCheckFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
