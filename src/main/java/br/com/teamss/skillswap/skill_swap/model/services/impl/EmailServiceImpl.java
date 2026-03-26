@@ -5,14 +5,9 @@ import com.twilio.Twilio;
 import com.twilio.rest.api.v2010.account.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage; // Importação do SimpleMailMessage
-import org.springframework.mail.javamail.JavaMailSender; // Importação do JavaMailSender
+import org.springframework.mail.SimpleMailMessage; 
+import org.springframework.mail.javamail.JavaMailSender; 
 import org.springframework.stereotype.Service;
-import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketSession;
-
-import java.io.IOException;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class EmailServiceImpl implements EmailService {
@@ -34,10 +29,8 @@ public class EmailServiceImpl implements EmailService {
     @Value("${twilio.phone.number}")
     private String twilioPhoneNumber;
 
-    private final ConcurrentHashMap<String, WebSocketSession> sessions;
-    
-    public EmailServiceImpl(ConcurrentHashMap<String, WebSocketSession> sessions) {
-        this.sessions = sessions;
+    // Construtor vazio padrão, pois os atributos já usam @Autowired ou @Value
+    public EmailServiceImpl() {
     }
 
     // Método de envio de notificação usando Spring Mail
@@ -83,14 +76,9 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendPlatformNotification(String message) {
-        for (WebSocketSession session : sessions.values()) {
-            if (session.isOpen()) {
-                try {
-                    session.sendMessage(new TextMessage(message));
-                } catch (IOException e) {
-                    System.out.println("Erro ao enviar notificação na plataforma: " + e.getMessage());
-                }
-            }
-        }
+        // NOTA DE REFATORAÇÃO: O EmailService não gerencia mais WebSockets.
+        // As notificações de plataforma em tempo real devem ser tratadas pelo ChatWebSocketHandler
+        // ou por um serviço de mensageria dedicado.
+        System.out.println("[EmailService] Log - Solicitação de notificação interna na plataforma: " + message);
     }
 }

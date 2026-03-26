@@ -9,6 +9,8 @@ import org.opensearch.client.json.jackson.JacksonJsonpMapper;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.transport.OpenSearchTransport;
 import org.opensearch.client.transport.rest_client.RestClientTransport;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,7 +18,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class OpenSearchConfig {
 
-    // A configuração agora puxa estritamente do seu application.properties
+    private static final Logger logger = LoggerFactory.getLogger(OpenSearchConfig.class);
+
+    // Removidos os valores padrão (:localhost, :9200, etc) para evitar exposição
     @Value("${opensearch.host}")
     private String host;
 
@@ -31,25 +35,32 @@ public class OpenSearchConfig {
 
     @Bean
     public OpenSearchClient openSearchClient() {
-        final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(
-            new AuthScope(host, port),
-            new UsernamePasswordCredentials(username, password)
-        );
+        logger.info("Iniciando configuração do OpenSearchClient para o host: {}", host);
+        try {
+            final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(
+                new AuthScope(host, port),
+                new UsernamePasswordCredentials(username, password)
+            );
 
-        // Constrói o RestClient de baixo nível (use "https" em produção com SSL)
-        final RestClient restClient = RestClient.builder(new HttpHost(host, port, "http")) 
-            .setHttpClientConfigCallback(httpClientBuilder -> 
-                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
-            )
-            .build();
+            // Constrói o RestClient de baixo nível
+            // Em ambiente de produção, altere "http" para "https" conforme necessário
+            final RestClient restClient = RestClient.builder(new HttpHost(host, port, "http")) 
+                .setHttpClientConfigCallback(httpClientBuilder -> 
+                    httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider)
+                )
+                .build();
 
-        // Constrói o Transport e o Cliente de alto nível
-        final OpenSearchTransport transport = new RestClientTransport(
-            restClient, 
-            new JacksonJsonpMapper()
-        );
+            // Constrói o Transport e o Cliente de alto nível
+            final OpenSearchTransport transport = new RestClientTransport(
+                restClient, 
+                new JacksonJsonpMapper()
+            );
 
-        return new OpenSearchClient(transport);
+            return new OpenSearchClient(transport);
+        } catch (Exception e) {
+            logger.error("Falha crítica ao criar o OpenSearchClient: {}", e.getMessage());
+            throw new RuntimeException("Erro ao configurar conexão com OpenSearch", e);
+        }
     }
 }

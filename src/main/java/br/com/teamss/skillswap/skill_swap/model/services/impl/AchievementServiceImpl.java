@@ -13,18 +13,20 @@ import br.com.teamss.skillswap.skill_swap.model.services.AchievementService;
 import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import br.com.teamss.skillswap.skill_swap.util.ByteArrayMultipartFile;
-import com.google.cloud.vertexai.VertexAI;
-import com.google.cloud.vertexai.api.GenerateContentResponse;
-// CORREÇÃO DE IMPORT: O Part correto vem da API, não do `generativeai`.
-import com.google.cloud.vertexai.api.Part;
-import com.google.cloud.vertexai.generativeai.GenerativeModel;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.reactive.function.client.WebClient;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -36,19 +38,21 @@ public class AchievementServiceImpl implements AchievementService {
     private final ProposalRepository proposalRepository;
     private final UserServiceDTO userServiceDTO;
     private final FileUploadService fileUploadService;
+    private final WebClient webClient;
+    private final ObjectMapper objectMapper;
 
     @Value("${gemini.api.key}")
     private String apiKey;
-    @Value("${gcp.project.id}")
-    private String gcpProjectId;
 
     public AchievementServiceImpl(AchievementRepository achievementRepository, UserAchievementRepository userAchievementRepository,
-                                  ProposalRepository proposalRepository, UserServiceDTO userServiceDTO, FileUploadService fileUploadService) {
+                                  ProposalRepository proposalRepository, UserServiceDTO userServiceDTO, FileUploadService fileUploadService, WebClient.Builder webClientBuilder) {
         this.achievementRepository = achievementRepository;
         this.userAchievementRepository = userAchievementRepository;
         this.proposalRepository = proposalRepository;
         this.userServiceDTO = userServiceDTO;
         this.fileUploadService = fileUploadService;
+        this.webClient = webClientBuilder.build();
+        this.objectMapper = new ObjectMapper();
     }
 
     @Override
@@ -112,18 +116,47 @@ public class AchievementServiceImpl implements AchievementService {
     }
 
     private byte[] generateImageWithGemini(String prompt) throws IOException {
-        try (VertexAI vertexAI = new VertexAI(gcpProjectId, "us-central1")) {
-            GenerativeModel model = new GenerativeModel("gemini-1.5-flash-001", vertexAI);
-            
-            GenerateContentResponse response = model.generateContent("Gere uma imagem com a seguinte descrição: " + prompt);
+        // URL da API oficial do Google AI Studio (Imagem) usando Imagen 3 ou similar disponível via REST
+        // Nota: Substitua "imagen-3.0-generate-001" pelo modelo correto de imagem da API REST caso a Google atualize a nomenclatura.
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=" + apiKey;
 
-            // CORREÇÃO: Acessar os dados da imagem corretamente
-            Part imagePart = response.getCandidates(0).getContent().getParts(0);
-            if (imagePart.getInlineData() == null || imagePart.getInlineData().getData().isEmpty()) {
-                throw new IOException("A API Gemini não retornou dados de imagem. Verifique o seu prompt ou as quotas da API.");
-            }
+        // Montagem do Payload de requisição (JSON) esperado pela API REST do Google AI Studio
+        Map<String, Object> requestBody = Map.of(
+            "instances", List.of(
+                Map.of("prompt", "Gere uma imagem com a seguinte descrição: " + prompt)
+            ),
+            "parameters", Map.of(
+                "sampleCount", 1
+            )
+        );
+
+        try {
+            String responseJson = webClient.post()
+                    .uri(url)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .bodyValue(requestBody)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            JsonNode rootNode = objectMapper.readTree(responseJson);
+            JsonNode predictionsNode = rootNode.path("predictions");
             
-            return imagePart.getInlineData().getData().toByteArray();
+            if (predictionsNode.isMissingNode() || !predictionsNode.isArray() || predictionsNode.isEmpty()) {
+                throw new IOException("A API Gemini não retornou dados de imagem válidos. Verifique as quotas e os logs.");
+            }
+
+            // O Google retorna a imagem em Base64 dentro do node de predictions
+            String base64Image = predictionsNode.get(0).path("bytesBase64Encoded").asText();
+            
+            if (base64Image == null || base64Image.isEmpty()) {
+                throw new IOException("A imagem retornada veio vazia.");
+            }
+
+            return Base64.getDecoder().decode(base64Image);
+
+        } catch (Exception e) {
+            throw new IOException("Erro na comunicação com a API do Google AI Studio: " + e.getMessage(), e);
         }
     }
 
