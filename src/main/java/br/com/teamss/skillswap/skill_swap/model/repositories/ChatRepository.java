@@ -11,13 +11,17 @@ import java.util.UUID;
 
 @Repository
 public interface ChatRepository extends JpaRepository<ChatMessage, Long> {
-    // Query personalizada pra buscar mensagens entre dois usuários (bidirecional)
+
+    // Busca o histórico entre dois usuários específicos (Bidirecional)
     @Query("SELECT cm FROM ChatMessage cm WHERE " +
-           "(cm.sender.userId = :senderId1 AND cm.receiver.userId = :receiverId1) OR " +
-           "(cm.sender.userId = :senderId2 AND cm.receiver.userId = :receiverId2)")
+           "(cm.sender.userId = :id1 AND cm.receiver.userId = :id2) OR " +
+           "(cm.sender.userId = :id2 AND cm.receiver.userId = :id1) " +
+           "ORDER BY cm.sentAt ASC")
     List<ChatMessage> findBySenderIdAndReceiverIdOrSenderIdAndReceiverId(
-        @Param("senderId1") UUID senderId1,         // ALTERADO DE Long PARA UUID
-        @Param("receiverId1") UUID receiverId1,     // ALTERADO DE Long PARA UUID
-        @Param("senderId2") UUID senderId2,         // ALTERADO DE Long PARA UUID
-        @Param("receiverId2") UUID receiverId2);    // ALTERADO DE Long PARA UUID
+            @Param("id1") UUID id1, @Param("id2") UUID id2, 
+            @Param("id2_alt") UUID id2_alt, @Param("id1_alt") UUID id1_alt);
+
+    // Busca TODAS as mensagens de um usuário para compor a lista de conversas ativas
+    @Query("SELECT m FROM ChatMessage m WHERE m.sender.userId = :userId OR m.receiver.userId = :userId ORDER BY m.sentAt DESC")
+    List<ChatMessage> findAllBySenderIdOrReceiverId(@Param("userId") UUID userId);
 }

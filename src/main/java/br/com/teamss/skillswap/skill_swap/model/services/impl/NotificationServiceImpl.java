@@ -6,8 +6,13 @@ import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.NotificationRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
+
+// IMPORTS DO FIREBASE ADICIONADOS
+import com.google.firebase.messaging.FirebaseMessaging;
+import com.google.firebase.messaging.Message;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException; // IMPORTADO
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -41,11 +46,10 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public void markAsRead(Long notificationId, UUID userId) { // Assinatura alterada
+    public void markAsRead(Long notificationId, UUID userId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new RuntimeException("Notificação não encontrada!"));
 
-        // VERIFICAÇÃO DE SEGURANÇA ADICIONADA
         if (!notification.getUser().getUserId().equals(userId)) {
             throw new AccessDeniedException("Você não tem permissão para marcar esta notificação como lida.");
         }
@@ -59,12 +63,33 @@ public class NotificationServiceImpl implements NotificationService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
+        // 1. SALVAR NO BANCO POSTGRES (Para histórico na plataforma)
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage(message);
         notification.setSentAt(Instant.now());
         notification.setRead(false);
-
         notificationRepository.save(notification);
+
+        // 2. DISPARAR PUSH REAL (Para o navegador/celular do usuário)
+        // Certifique-se de que o campo fcmToken existe na sua entidade User
+        String deviceToken = user.getFcmToken(); 
+        
+        if (deviceToken != null && !deviceToken.isEmpty()) {
+            try {
+                Message firebaseMessage = Message.builder()
+                    .setToken(deviceToken)
+                    .setNotification(com.google.firebase.messaging.Notification.builder()
+                        .setTitle("SkillSwapHub")
+                        .setBody(message)
+                        .build())
+                    .build();
+
+                FirebaseMessaging.getInstance().sendAsync(firebaseMessage);
+            } catch (Exception e) {
+                // Log de erro silencioso para não travar o fluxo do sistema
+                System.err.println("Erro ao enviar Push: " + e.getMessage());
+            }
+        }
     }
 }

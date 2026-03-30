@@ -60,6 +60,10 @@ public class User {
     @Column(name = "banned")
     private boolean banned = false;
 
+    // --- INCREMENTO: Firebase Cloud Messaging Token ---
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     // --- START: Accessibility Settings ---
     @Column(name = "libras_avatar_enabled", columnDefinition = "BOOLEAN DEFAULT FALSE")
     private boolean librasAvatarEnabled = false;
@@ -218,6 +222,15 @@ public class User {
         this.twoFactorSecret = twoFactorSecret;
     }
 
+    // --- INCREMENTO: FCM Token Get/Set ---
+    public String getFcmToken() {
+        return fcmToken;
+    }
+
+    public void setFcmToken(String fcmToken) {
+        this.fcmToken = fcmToken;
+    }
+
     public Profile getProfile() {
         return profile;
     }
@@ -340,7 +353,7 @@ public class User {
     }
     // --- END: Accessibility Settings Getters/Setters ---
 
-    // --- equals() and hashCode() based on userId (Opcional, mas recomendado) ---
+    // --- equals() and hashCode() based on userId ---
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

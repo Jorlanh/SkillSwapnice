@@ -10,7 +10,6 @@ import br.com.teamss.skillswap.skill_swap.model.services.ContentModerationServic
 import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.NotificationService;
 import br.com.teamss.skillswap.skill_swap.model.services.PostService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,7 +33,7 @@ public class PostServiceImpl implements PostService {
     private final FileUploadService fileUploadService;
     private final ContentModerationService moderationService;
 
-    @Autowired
+    // Injeção via construtor (Recomendado)
     public PostServiceImpl(PostRepository postRepository, UserRepository userRepository,
                            NotificationService notificationService, LikeRepository likeRepository,
                            RepostRepository repostRepository, ShareLinkRepository shareLinkRepository,
@@ -52,85 +51,99 @@ public class PostServiceImpl implements PostService {
     }
 
     @Override
-    public Post createPost(UUID userId, String title, String content, MultipartFile image, MultipartFile video) throws IOException {
+    @Transactional
+    public Post createPost(UUID userId, String title, String content, MultipartFile image, MultipartFile video) {
         if (moderationService.isContentInappropriate(title) || moderationService.isContentInappropriate(content)) {
-            throw new InappropriateContentException("O seu post não pôde ser publicado pois contém texto que viola as nossas diretrizes da comunidade.");
+            throw new InappropriateContentException("O seu post viola as diretrizes da comunidade.");
         }
+        
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
-        String imageUrl = fileUploadService.uploadFile(image);
-        String videoUrl = fileUploadService.uploadFile(video);
         Post post = new Post();
         post.setUser(user);
         post.setTitle(title);
         post.setContent(content);
         post.setProfile(user.getProfile());
-        post.setImageUrl(imageUrl);
-        post.setVideoUrl(videoUrl);
         post.setCreatedAt(Instant.now());
+
+        try {
+            if (image != null && !image.isEmpty()) {
+                post.setImageUrl(fileUploadService.uploadFile(image));
+            }
+            if (video != null && !video.isEmpty()) {
+                post.setVideoUrl(fileUploadService.uploadFile(video));
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao processar mídia do post: " + e.getMessage());
+        }
+
         return postRepository.save(post);
+    }
+
+    @Override
+    @Transactional
+    public Post save(Post post, UUID userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        post.setUser(user);
+        if (post.getCreatedAt() == null) post.setCreatedAt(Instant.now());
+        return postRepository.save(post);
+    }
+
+    @Override
+    public List<Post> findAll() {
+        return postRepository.findAll();
     }
 
     @Override
     @Transactional
     public Post commentOnPost(Long postId, UUID userId, String content) {
         if (moderationService.isContentInappropriate(content)) {
-            throw new InappropriateContentException("O seu comentário não pôde ser publicado pois contém texto que viola as nossas diretrizes da comunidade.");
+            throw new InappropriateContentException("Comentário inadequado.");
         }
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        
         Comment newComment = new Comment();
         newComment.setPost(post);
         newComment.setUser(user);
         newComment.setContent(content);
         commentRepository.save(newComment);
+        
         post.setCommentsCount(post.getCommentsCount() + 1);
-        Post updatedPost = postRepository.save(post);
         notificationService.createNotification(post.getUser().getUserId(), "Seu post recebeu um comentário de " + user.getUsername());
-        return updatedPost;
+        
+        return postRepository.save(post);
     }
 
-    // ... (o resto dos métodos da classe continua aqui, sem alterações) ...
-    
     @Override
     @Transactional
     public Post likePost(Long postId, UUID userId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
         if (likeRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
             throw new IllegalStateException("O usuário já curtiu este post.");
         }
 
-        Like like = new Like(post, user);
-        likeRepository.save(like);
-
+        likeRepository.save(new Like(post, user));
         post.setLikesCount(post.getLikesCount() + 1);
-        postRepository.save(post);
+        
+        notificationService.createNotification(post.getUser().getUserId(), "Seu post foi curtido por " + user.getUsername());
 
-        notificationService.createNotification(post.getUser().getUserId(),
-                "Seu post foi curtido por " + user.getUsername());
-
-        return post;
+        return postRepository.save(post);
     }
 
     @Override
     @Transactional
     public Post repost(Long postId, UUID userId) {
-        Post originalPost = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
+        Post originalPost = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado!"));
 
         if (!repostRepository.existsByPost_PostIdAndUser_UserId(postId, userId)) {
-            Repost repost = new Repost(originalPost, user);
-            repostRepository.save(repost);
+            repostRepository.save(new Repost(originalPost, user));
             originalPost.setRepostsCount(originalPost.getRepostsCount() + 1);
             postRepository.save(originalPost);
-
-            notificationService.createNotification(originalPost.getUser().getUserId(),
-                    "Seu post foi repostado por " + user.getUsername());
+            
+            notificationService.createNotification(originalPost.getUser().getUserId(), "Seu post foi repostado por " + user.getUsername());
         }
 
         Post repostPost = new Post();
@@ -138,6 +151,7 @@ public class PostServiceImpl implements PostService {
         repostPost.setTitle("Repost: " + originalPost.getTitle());
         repostPost.setContent(originalPost.getContent());
         repostPost.setProfile(user.getProfile());
+        repostPost.setCreatedAt(Instant.now());
         postRepository.save(repostPost);
 
         return originalPost;
@@ -146,16 +160,15 @@ public class PostServiceImpl implements PostService {
     @Override
     @Transactional
     public String generateShareLink(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
-        User user = post.getUser();
-
-        String shareUrl = "https://skillswap.com/share/post/" + UUID.randomUUID().toString();
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        String shareUrl = "https://skillswap.com/share/post/" + UUID.randomUUID();
+        
         ShareLink shareLink = new ShareLink();
         shareLink.setPost(post);
-        shareLink.setUser(user);
+        shareLink.setUser(post.getUser());
         shareLink.setShareUrl(shareUrl);
         shareLinkRepository.save(shareLink);
+        
         post.setSharesCount(post.getSharesCount() + 1);
         postRepository.save(post);
 
@@ -167,37 +180,22 @@ public class PostServiceImpl implements PostService {
         Instant startTime = calculateStartTime(period);
         List<Post> posts = postRepository.findTrendingPosts(startTime);
 
+        // Lógica de ordenação robusta
         switch (sortBy.toUpperCase()) {
-            case "LIKES":
-                posts.sort(Comparator.comparingInt(Post::getLikesCount).reversed());
-                break;
-            case "REPOSTS":
-                posts.sort(Comparator.comparingInt(Post::getRepostsCount).reversed());
-                break;
-            case "COMMENTS":
-                posts.sort(Comparator.comparingInt(Post::getCommentsCount).reversed());
-                break;
-            case "SHARES":
-                posts.sort(Comparator.comparingInt(Post::getSharesCount).reversed());
-                break;
-            case "DATE":
-                posts.sort(Comparator.comparing(Post::getCreatedAt).reversed());
-                break;
-            case "TRENDING":
-            default:
-                break;
+            case "LIKES" -> posts.sort(Comparator.comparingInt(Post::getLikesCount).reversed());
+            case "REPOSTS" -> posts.sort(Comparator.comparingInt(Post::getRepostsCount).reversed());
+            case "COMMENTS" -> posts.sort(Comparator.comparingInt(Post::getCommentsCount).reversed());
+            case "SHARES" -> posts.sort(Comparator.comparingInt(Post::getSharesCount).reversed());
+            case "DATE" -> posts.sort(Comparator.comparing(Post::getCreatedAt).reversed());
+            default -> {} 
         }
 
         return posts.stream().map(post -> {
             PostResponseDTO dto = new PostResponseDTO();
-            UserSummaryDTO userSummary = new UserSummaryDTO(
-                post.getUser().getUsername(),
-                post.getUser().getName()
-            );
             dto.setPostId(post.getPostId());
             dto.setTitle(post.getTitle());
             dto.setContent(post.getContent());
-            dto.setUser(userSummary);
+            dto.setUser(new UserSummaryDTO(post.getUser().getUsername(), post.getUser().getName()));
             dto.setImageUrl(post.getImageUrl());
             dto.setVideoUrl(post.getVideoUrl());
             dto.setCreatedAt(post.getCreatedAt());
@@ -208,10 +206,6 @@ public class PostServiceImpl implements PostService {
             dto.setViewsCount(post.getViewsCount());
             return dto;
         }).collect(Collectors.toList());
-    }
-    
-    public List<PostResponseDTO> getPosts(String sortBy, Instant startTime) {
-        return new ArrayList<>();
     }
 
     @Override
@@ -226,6 +220,7 @@ public class PostServiceImpl implements PostService {
                 if (word.length() > 3) {
                     double score = (post.getLikesCount() + post.getRepostsCount() +
                             post.getCommentsCount() + post.getSharesCount()) / 4.0;
+                    // Correção de Null Safety no merge
                     topicScores.merge(word, score, Double::sum);
                 }
             }
@@ -238,10 +233,10 @@ public class PostServiceImpl implements PostService {
                 .collect(Collectors.toList());
     }
 
+    @Override
     @Transactional
     public void incrementViewCount(Long postId) {
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new RuntimeException("Post não encontrado!"));
+        Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado!"));
         post.setViewsCount(post.getViewsCount() + 1);
         postRepository.save(post);
     }
@@ -260,14 +255,10 @@ public class PostServiceImpl implements PostService {
 
     private Instant calculateStartTime(String period) {
         Instant now = Instant.now();
-        switch (period.toUpperCase()) {
-            case "WEEK":
-                return now.minus(7, ChronoUnit.DAYS);
-            case "MONTH":
-                return now.minus(30, ChronoUnit.DAYS);
-            case "DAY":
-            default:
-                return now.minus(1, ChronoUnit.DAYS);
-        }
+        return switch (period.toUpperCase()) {
+            case "WEEK" -> now.minus(7, ChronoUnit.DAYS);
+            case "MONTH" -> now.minus(30, ChronoUnit.DAYS);
+            default -> now.minus(1, ChronoUnit.DAYS);
+        };
     }
 }

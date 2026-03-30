@@ -6,11 +6,15 @@ import br.com.teamss.skillswap.skill_swap.model.entities.User;
 import br.com.teamss.skillswap.skill_swap.model.repositories.PostRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.ProfileRepository;
 import br.com.teamss.skillswap.skill_swap.model.repositories.UserRepository;
+import br.com.teamss.skillswap.skill_swap.model.services.FileUploadService;
 import br.com.teamss.skillswap.skill_swap.model.services.ProfileService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -30,23 +34,29 @@ public class ProfileServiceImpl implements ProfileService {
     @Autowired
     private ProfileRepository profileRepository;
 
-    public ProfileServiceImpl(UserRepository userRepository, PostRepository postRepository) {
-        this.userRepository = userRepository;
-        this.postRepository = postRepository;
-    }
+    @Autowired
+    private FileUploadService fileUploadService;
 
+    // Construtor removido para evitar conflito com @Autowired nos campos
+    // O Spring Boot injetará as dependências automaticamente.
+
+    @Override
     public List<Profile> findAll() {
         return profileRepository.findAll();
     }
 
+    @Override
     public Optional<Profile> findById(Long id) {
         return profileRepository.findById(id);
     }
 
+    @Override
     public Optional<Profile> findByUserId(UUID userId) {
         return profileRepository.findByUser_UserId(userId);
     }
 
+    @Override
+    @Transactional
     public Profile createProfile(Profile profile, UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
@@ -55,11 +65,14 @@ public class ProfileServiceImpl implements ProfileService {
         return profileRepository.save(profile);
     }
 
+    @Override
+    @Transactional
     public Profile save(Profile profile) {
         return profileRepository.save(profile);
     }
 
     @Override
+    @Transactional
     public Profile update(Long id, Profile profileDetails) {
         Profile existingProfile = profileRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Perfil não encontrado com id: " + id));
@@ -77,6 +90,8 @@ public class ProfileServiceImpl implements ProfileService {
         return profileRepository.save(existingProfile);
     }
 
+    @Override
+    @Transactional
     public void delete(Long id) {
         profileRepository.deleteById(id);
     }
@@ -91,6 +106,48 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
+    public void createPost(UUID userId, String content, MultipartFile image) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
+        
+        Post post = new Post();
+        post.setUser(user);
+        post.setContent(content);
+        post.setCreatedAt(Instant.now());
+        post.setLikesCount(0);
+        post.setCommentsCount(0);
+        post.setRepostsCount(0);
+        post.setSharesCount(0);
+        post.setViewsCount(0);
+
+        if (image != null && !image.isEmpty()) {
+            try {
+                String imageUrl = fileUploadService.uploadFile(image);
+                post.setImageUrl(imageUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Falha ao processar upload da imagem: " + e.getMessage());
+            }
+        }
+
+        postRepository.save(post);
+    }
+
+    @Override
+    @Transactional
+    public void deletePost(Long postId, UUID userId) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new EntityNotFoundException("Post não encontrado"));
+        
+        if (!post.getUser().getUserId().equals(userId)) {
+            throw new RuntimeException("Você não tem permissão para deletar este post");
+        }
+
+        postRepository.delete(post);
+    }
+
+    @Override
+    @Transactional
     public void incrementViewCount(Long postId) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado"));
         post.setViewsCount(post.getViewsCount() + 1);
@@ -98,6 +155,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public Post likePost(Long postId, UUID userId) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado"));
         post.setLikesCount(post.getLikesCount() + 1);
@@ -105,6 +163,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public Post commentOnPost(Long postId, UUID userId, String content) {
         Post post = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado"));
         post.setCommentsCount(post.getCommentsCount() + 1);
@@ -112,17 +171,23 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public Post repost(Long postId, UUID userId) {
-        Post originalPost = postRepository.findById(postId).orElseThrow(() -> new RuntimeException("Post não encontrado"));
+        Post originalPost = postRepository.findById(postId)
+                .orElseThrow(() -> new RuntimeException("Post não encontrado"));
+        
         Post repost = new Post();
-        repost.setUser(userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado")));
-        repost.setRepostOf(postId);
+        repost.setUser(userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuário não encontrado")));
+        repost.setRepostOf(originalPost.getPostId());
+        repost.setContent(originalPost.getContent()); // Reposts costumam manter o conteúdo original
         repost.setCreatedAt(Instant.now());
         repost.setLikesCount(0);
         repost.setRepostsCount(0);
         repost.setCommentsCount(0);
         repost.setSharesCount(0);
         repost.setViewsCount(0);
+        
         return postRepository.save(repost);
     }
 
@@ -139,6 +204,7 @@ public class ProfileServiceImpl implements ProfileService {
     @Override
     public List<Post> getCommunityPosts(UUID userId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
+        // Se a entidade User tiver getCommunityIds, senão ajuste para sua lógica de ManyToMany
         return postRepository.findByCommunity_CommunityIdIn(user.getCommunityIds());
     }
 
@@ -161,6 +227,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public void followUser(UUID userId, UUID targetUserId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
         User target = userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("Usuário alvo não encontrado"));
@@ -173,6 +240,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public void unfollowUser(UUID userId, UUID targetUserId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Usuário não encontrado"));
         User target = userRepository.findById(targetUserId).orElseThrow(() -> new RuntimeException("Usuário alvo não encontrado"));
@@ -185,6 +253,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public User updateProfile(UUID userId, User updatedUser) {
         User user = userRepository.findById(userId).orElseThrow(() -> new EntityNotFoundException("Usuário não encontrado"));
         user.setName(updatedUser.getName());
@@ -197,6 +266,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     @Override
+    @Transactional
     public void sendMessage(UUID senderId, UUID receiverId, String content, String type) {
         User sender = userRepository.findById(senderId).orElseThrow(() -> new RuntimeException("Remetente não encontrado"));
         User receiver = userRepository.findById(receiverId).orElseThrow(() -> new RuntimeException("Destinatário não encontrado"));

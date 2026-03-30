@@ -3,6 +3,7 @@ package br.com.teamss.skillswap.skill_swap.model.services;
 import br.com.teamss.skillswap.skill_swap.model.entities.Post;
 import br.com.teamss.skillswap.skill_swap.model.entities.Profile;
 import br.com.teamss.skillswap.skill_swap.model.entities.User;
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -18,6 +19,11 @@ public interface ProfileService {
 
     List<Post> getFeed(UUID userId);
     void incrementViewCount(Long postId);
+    
+    // Métodos integrados com o fluxo de rede social
+    void createPost(UUID userId, String content, MultipartFile image);
+    void deletePost(Long postId, UUID userId);
+    
     Post likePost(Long postId, UUID userId);
     Post commentOnPost(Long postId, UUID userId, String content);
     Post repost(Long postId, UUID userId);
@@ -29,7 +35,7 @@ public interface ProfileService {
     void followUser(UUID userId, UUID targetUserId);
     void unfollowUser(UUID userId, UUID targetUserId);
     User updateProfile(UUID userId, User updatedUser);
-    void sendMessage(UUID senderId, UUID receiverId, String content, String type); // Tipo: text, image, video, pdf, etc.
+    void sendMessage(UUID senderId, UUID receiverId, String content, String type);
     void scheduleLesson(UUID userId, String calendarEvent);
     List<UUID> getMessages(UUID userId);
 }

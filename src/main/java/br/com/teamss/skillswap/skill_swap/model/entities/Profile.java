@@ -58,6 +58,10 @@ public class Profile {
     private String experienceLevel;
 
     private String educationLevel;
+
+    // --- INCREMENTO: CONTA PRIVADA ---
+    @Column(name = "is_private")
+    private Boolean isPrivate = false;
     
     public Profile() {}
 
@@ -85,6 +89,4 @@ public class Profile {
             return false;
         return true;
     }
-
-    
 }

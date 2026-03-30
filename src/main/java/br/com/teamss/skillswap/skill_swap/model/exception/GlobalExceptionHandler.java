@@ -4,8 +4,10 @@ import br.com.teamss.skillswap.skill_swap.model.services.SecurityAuditService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
+import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -20,10 +23,15 @@ public class GlobalExceptionHandler {
     @Autowired
     private SecurityAuditService auditService;
 
+    // --- NOVO: Tratamento de Nomes de Usuário Duplicados ---
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleUniqueConstraintViolation(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(Map.of("message", "O nome de usuário ou e-mail já está em uso. Escolha outro."));
+    }
+
     @ExceptionHandler(InappropriateContentException.class)
     public ProblemDetail handleInappropriateContent(InappropriateContentException ex) {
-        // Usamos HttpStatus.UNPROCESSABLE_ENTITY (422), que indica que a requisição está bem formada,
-        // mas não pode ser processada por razões semânticas (o conteúdo é inválido).
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.UNPROCESSABLE_ENTITY, ex.getMessage());
         problem.setTitle("Conteúdo Inapropriado");
         problem.setType(URI.create("urn:problem-type:inappropriate-content"));

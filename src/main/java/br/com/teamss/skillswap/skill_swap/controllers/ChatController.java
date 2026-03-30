@@ -8,15 +8,11 @@ import br.com.teamss.skillswap.skill_swap.model.services.UserServiceDTO;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 @RestController
@@ -29,11 +25,17 @@ public class ChatController {
     @Autowired
     private UserServiceDTO userServiceDTO;
 
+    @GetMapping("/conversations")
+    public ResponseEntity<List<Map<String, Object>>> getMyConversations() {
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        return ResponseEntity.ok(chatService.getActiveConversations(authenticatedUser.getUserId()));
+    }
+
     @PostMapping("/send")
     public ChatMessage sendMessage(@RequestBody ChatMessageRequestDTO messageRequest) {
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
         if (!authenticatedUser.getUserId().equals(messageRequest.getSenderId())) {
-            throw new AccessDeniedException("Não é permitido enviar mensagens em nome de outro usuário.");
+            throw new AccessDeniedException("Assinatura de usuário inválida.");
         }
         return chatService.sendMessage(messageRequest);
     }
@@ -41,46 +43,25 @@ public class ChatController {
     @PostMapping("/send-voice")
     public ChatMessage sendVoiceMessage(@RequestParam("voice") MultipartFile voiceFile, @RequestParam UUID receiverId) {
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
-        UUID senderId = authenticatedUser.getUserId();
-
-        if (voiceFile.getSize() > 10485760) { // 10MB
-            throw new IllegalArgumentException("Voice file size exceeds 10MB");
-        }
         try {
-            return chatService.sendVoiceMessage(senderId, receiverId, voiceFile.getBytes());
+            return chatService.sendVoiceMessage(authenticatedUser.getUserId(), receiverId, voiceFile.getBytes());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to process voice file: " + e.getMessage(), e);
+            throw new RuntimeException("Erro ao processar áudio: " + e.getMessage());
         }
     }
 
     @PostMapping("/upload-file")
     public ChatMessage uploadFile(@RequestParam("file") MultipartFile file, @RequestParam UUID receiverId) {
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
-        UUID senderId = authenticatedUser.getUserId();
-
-        long fileSizeLimit = getFileSizeLimit(file.getContentType());
-        if (file.getSize() > fileSizeLimit) {
-            throw new IllegalArgumentException("File size exceeds limit for type: " + file.getContentType());
-        }
         try {
-            return chatService.sendFileMessage(senderId, receiverId, file.getBytes(), file.getContentType());
+            return chatService.sendFileMessage(authenticatedUser.getUserId(), receiverId, file.getBytes(), file.getContentType());
         } catch (IOException e) {
-            throw new RuntimeException("Failed to process file: " + e.getMessage(), e);
+            throw new RuntimeException("Falha no upload de arquivo.");
         }
     }
 
     @GetMapping("/history/{userId1}/{userId2}")
     public List<ChatMessage> getChatHistory(@PathVariable UUID userId1, @PathVariable UUID userId2) {
         return chatService.getChatHistory(userId1, userId2);
-    }
-
-    private long getFileSizeLimit(String contentType) {
-        if (contentType != null && contentType.startsWith("image/")) {
-            return 10485760; // 10 MB
-        }
-        if (contentType != null && contentType.startsWith("video/")) {
-            return 104857600; // 100MB
-        }
-        return 20971520; // 20MB
     }
 }
