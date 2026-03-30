@@ -29,7 +29,6 @@ public class SearchServiceImpl implements SearchService {
 
     private final OpenSearchClient client;
 
-    // Índices no OpenSearch
     public static final String USER_INDEX = "users";
     public static final String POST_INDEX = "posts";
     public static final String COMMUNITY_INDEX = "communities";
@@ -41,10 +40,10 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public List<SearchResultDTO> search(String query, String filter, String sortBy) throws IOException {
         List<String> indicesToSearch = new ArrayList<>();
+        
+        // Configuração de filtros de índice
         if ("ALL".equalsIgnoreCase(filter)) {
-            indicesToSearch.add(USER_INDEX);
-            indicesToSearch.add(POST_INDEX);
-            indicesToSearch.add(COMMUNITY_INDEX);
+            indicesToSearch.addAll(List.of(USER_INDEX, POST_INDEX, COMMUNITY_INDEX));
         } else if ("PROFILE".equalsIgnoreCase(filter)) {
             indicesToSearch.add(USER_INDEX);
         } else if ("CONTENT".equalsIgnoreCase(filter)) {
@@ -53,11 +52,11 @@ public class SearchServiceImpl implements SearchService {
             indicesToSearch.add(COMMUNITY_INDEX);
         }
 
-        // Constrói a query Multi-Match
+        // Busca Full-Text com Fuzziness (Tolera erros de digitação)
         Query multiMatchQuery = Query.of(q -> q
             .multiMatch(mm -> mm
                 .query(query)
-                .fields("username^3", "name^2", "bio", "title^3", "content", "description") // Prioriza campos
+                .fields("username^3", "name^2", "bio", "title^3", "content", "description")
                 .fuzziness("AUTO")
             )
         );
@@ -66,30 +65,23 @@ public class SearchServiceImpl implements SearchService {
             .index(indicesToSearch)
             .query(multiMatchQuery);
 
-        // Lógica de ordenação
+        // Lógica de Ordenação
         List<SortOptions> sortOptions = new ArrayList<>();
         if ("DATE".equalsIgnoreCase(sortBy)) {
-            // Ordena por data (mais recentes primeiro)
             sortOptions.add(SortOptions.of(s -> s.field(f -> f
                 .field("createdAt")
                 .order(SortOrder.Desc)
                 .unmappedType(FieldType.Long)
-                .missing(FieldValue.of("_last")) // CORRIGIDO
+                .missing(FieldValue.of("_last"))
             )));
-            // Desempate por relevância (score)
-            sortOptions.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
         } else {
-            // Padrão: relevância
+            // Relevância (Score) é o padrão
             sortOptions.add(SortOptions.of(s -> s.score(sc -> sc.order(SortOrder.Desc))));
         }
 
-        // Desempate final por ID
-        sortOptions.add(SortOptions.of(s -> s.field(f -> f.field("_id").order(SortOrder.Asc))));
         requestBuilder.sort(sortOptions);
 
-        // Executa a busca
-        SearchRequest searchRequest = requestBuilder.build();
-        SearchResponse<JsonNode> response = client.search(searchRequest, JsonNode.class);
+        SearchResponse<JsonNode> response = client.search(requestBuilder.build(), JsonNode.class);
 
         TotalHits total = response.hits().total();
         if (total == null || total.value() == 0) {
@@ -102,37 +94,37 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private SearchResultDTO convertHitToDTO(Hit<JsonNode> hit) {
-        String type = mapIndexToType(hit.index());
+        String index = hit.index();
+        String type = mapIndexToType(index);
         JsonNode source = hit.source();
-        if (source == null) {
-            return null;
-        }
+        
+        if (source == null) return null;
 
         String id = hit.id();
         String title = "";
         String description = "";
         String imageUrl = "";
 
+        // Mapeamento dinâmico baseado no índice de origem
         switch (type) {
             case "user":
-                title = source.has("username") ? source.get("username").asText() : "";
-                description = source.has("bio") ? source.get("bio").asText() : "";
-                imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : "";
+                title = source.path("username").asText("");
+                description = source.path("name").asText("") + " - " + source.path("bio").asText("");
+                imageUrl = source.path("imageUrl").asText("");
                 break;
             case "post":
-                title = source.has("title") ? source.get("title").asText() : "";
-                description = source.has("content") ? source.get("content").asText() : "";
-                imageUrl = source.has("imageUrl") ? source.get("imageUrl").asText() : "";
+                title = source.path("title").asText("");
+                description = source.path("content").asText("");
+                imageUrl = source.path("imageUrl").asText("");
                 break;
             case "community":
-                title = source.has("name") ? source.get("name").asText() : "";
-                description = source.has("description") ? source.get("description").asText() : "";
+                title = source.path("name").asText("");
+                description = source.path("description").asText("");
                 break;
         }
 
-        // Corrigido: evitar auto-unboxing nulo
         Double scoreObj = hit.score();
-        double score = (scoreObj != null) ? scoreObj.doubleValue() : 0.0;
+        double score = (scoreObj != null) ? scoreObj : 0.0;
 
         return new SearchResultDTO(id, type, title, description, imageUrl, score);
     }
@@ -144,24 +136,13 @@ public class SearchServiceImpl implements SearchService {
         return "unknown";
     }
 
-    // --- Métodos de sincronização ---
-
     @Override
     public <T> void indexDocument(String indexName, String docId, T document) throws IOException {
-        IndexRequest<T> request = new IndexRequest.Builder<T>()
-            .index(indexName)
-            .id(docId)
-            .document(document)
-            .build();
-        client.index(request);
+        client.index(i -> i.index(indexName).id(docId).document(document));
     }
 
     @Override
     public void deleteDocument(String indexName, String docId) throws IOException {
-        DeleteRequest request = new DeleteRequest.Builder()
-            .index(indexName)
-            .id(docId)
-            .build();
-        client.delete(request);
+        client.delete(d -> d.index(indexName).id(docId));
     }
 }

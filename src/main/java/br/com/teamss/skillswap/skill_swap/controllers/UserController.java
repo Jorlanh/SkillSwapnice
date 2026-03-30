@@ -14,14 +14,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/users")
@@ -38,6 +31,8 @@ public class UserController {
         this.userService = userService;
     }
 
+    // --- LEITURA DE DADOS ---
+
     @GetMapping
     public List<UserSummaryDTO> getAllUsers() {
         return userServiceDTO.findAllSummaries();
@@ -48,13 +43,25 @@ public class UserController {
         return ResponseEntity.ok(userServiceDTO.findPublicProfileByUsername(username));
     }
 
+    /**
+     * ENDPOINT DE IDENTIDADE (SINCRONIZADO COM AUTH0)
+     * Se o usuário logou via Auth0 mas ainda não tem perfil no Postgres, 
+     * aqui é o momento de validar a existência.
+     */
     @GetMapping("/me")
     public ResponseEntity<UserPrivateProfileDTO> getMyProfile() {
+        // 1. Obtém os dados básicos vindos do Token JWT (Auth0)
         UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        
+        // 2. Tenta encontrar no banco PostgreSQL
         User user = userRepository.findById(authenticatedUser.getUserId())
-            .orElseThrow(() -> new EntityNotFoundException("Usuário autenticado não encontrado no banco de dados."));
+            .or(() -> userRepository.findByEmail(authenticatedUser.getEmail())) // Fallback por email se UUID divergir
+            .orElseThrow(() -> new EntityNotFoundException("Usuário do Auth0 ainda não sincronizado no banco local."));
+            
         return ResponseEntity.ok(userServiceDTO.toUserPrivateProfileDTO(user));
     }
+
+    // --- OPERAÇÕES DE ESCRITA E ADMINISTRAÇÃO ---
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

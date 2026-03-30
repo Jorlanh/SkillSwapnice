@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,6 +24,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import br.com.teamss.skillswap.skill_swap.filters.BanCheckFilter;
 
+import static org.springframework.security.config.Customizer.withDefaults;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -31,16 +35,22 @@ public class SecurityFilterChainConfig {
     private String[] allowedOrigins;
 
     private final BanCheckFilter banCheckFilter; 
+    private final OAuth2SuccessHandler oauth2SuccessHandler; // Injeção do Handler de Sucesso
 
-    public SecurityFilterChainConfig(BanCheckFilter banCheckFilter) {
+    public SecurityFilterChainConfig(BanCheckFilter banCheckFilter, OAuth2SuccessHandler oauth2SuccessHandler) {
         this.banCheckFilter = banCheckFilter;
+        this.oauth2SuccessHandler = oauth2SuccessHandler;
     }
 
-    // --- CONVERSOR DO AUTH0 ---
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
+    }
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter converter = new JwtGrantedAuthoritiesConverter();
-        converter.setAuthoritiesClaimName("permissions"); // Lê as permissões do payload JWT do Auth0
+        converter.setAuthoritiesClaimName("permissions"); 
         converter.setAuthorityPrefix(""); 
         
         JwtAuthenticationConverter jwtConverter = new JwtAuthenticationConverter();
@@ -55,8 +65,8 @@ public class SecurityFilterChainConfig {
         http
             .securityMatcher(AntPathRequestMatcher.antMatcher("/h2-console/**"))
             .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-            .csrf(csrf -> csrf.ignoringRequestMatchers(AntPathRequestMatcher.antMatcher("/h2-console/**")))
-            .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+            .csrf(csrf -> csrf.disable())
+            .headers(headers -> headers.frameOptions(f -> f.sameOrigin()));
         return http.build();
     }
 
@@ -64,38 +74,36 @@ public class SecurityFilterChainConfig {
     @Order(2)
     public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http) throws Exception {
         http
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .cors(withDefaults())
             .csrf(csrf -> csrf.disable())
             
-            .headers(headers -> headers
-                .httpStrictTransportSecurity(hsts -> hsts
-                    .includeSubDomains(true)
-                    .maxAgeInSeconds(31536000))
-                .frameOptions(frameOptions -> frameOptions.deny())
-                .referrerPolicy(referrer -> referrer.policy(org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN))
-            )
-            
+            // Gerenciamento de sessão: STATELESS para JWT
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/skills/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/roles/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/search/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/home/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/profiles/user/{username}"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.GET, "/api/rankings/**"),
-                    AntPathRequestMatcher.antMatcher(HttpMethod.OPTIONS, "/**"),
-                    AntPathRequestMatcher.antMatcher("/error")
-                ).permitAll()
+                // Endpoints Públicos e Fluxos de Autenticação
+                .requestMatchers(HttpMethod.POST, "/api/auth/login", "/api/login").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/home/**", "/api/skills/**", "/api/rankings/**", "/api/search/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/roles/**", "/api/profiles/user/{username}").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/error", "/login/**", "/oauth2/**").permitAll()
+                
+                // Exigência de autenticação para o restante
                 .anyRequest().authenticated()
             )
             
-            // Ativa o conversor JWT que criamos acima
+            // CONFIGURAÇÃO OAUTH2 LOGIN: Redirecionamento e Sucesso
+            .oauth2Login(oauth2 -> oauth2
+                // O SuccessHandler injeta o Token na URL de retorno do Frontend
+                .successHandler(oauth2SuccessHandler)
+            )
+            
+            // CONFIGURAÇÃO RESOURCE SERVER: Validação do JWT enviado pelo Front
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
             )
             
+            // Filtros Customizados (Ex: Verificação de Banimento)
             .addFilterAfter(banCheckFilter, BearerTokenAuthenticationFilter.class);
 
         return http.build();
@@ -103,21 +111,16 @@ public class SecurityFilterChainConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList(
-            "Authorization", "Cache-Control", "Content-Type", "X-Requested-With",
-            "Accept", "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"
-        ));
-        configuration.setExposedHeaders(Arrays.asList(
-            "Authorization", "Content-Type", "X-Rate-Limit-Remaining"
-        ));
-        configuration.setAllowCredentials(true);
-        configuration.setMaxAge(3600L);
+        CorsConfiguration config = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList(allowedOrigins));
+        config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(Arrays.asList("Authorization", "Cache-Control", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "X-Rate-Limit-Remaining", "Access-Control-Allow-Origin"));
+        config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

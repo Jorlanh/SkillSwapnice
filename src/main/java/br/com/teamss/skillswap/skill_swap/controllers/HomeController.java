@@ -38,17 +38,23 @@ public class HomeController {
         this.commentService = commentService;
         this.userServiceDTO = userServiceDTO;
     }
-    
-    // ... (outros métodos do controller)
+
+    /**
+     * CORREÇÃO TÁTICA: Endpoint solicitado pelo Frontend (api.ts)
+     * Mapeia /api/home/trending para retornar os posts em alta.
+     */
+    @GetMapping("/trending")
+    public ResponseEntity<List<Post>> getTrending(@RequestParam(defaultValue = "DAY") String period) {
+        return ResponseEntity.ok(trendingService.getTrendingPosts(period, 10));
+    }
 
     @PostMapping("/notifications/{notificationId}/read")
     public ResponseEntity<Void> markNotificationAsRead(@PathVariable Long notificationId) {
-        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser(); // Obtém usuário autenticado
-        notificationService.markAsRead(notificationId, authenticatedUser.getUserId()); // Passa o ID do usuário
+        UserDTO authenticatedUser = userServiceDTO.getAuthenticatedUser();
+        notificationService.markAsRead(notificationId, authenticatedUser.getUserId());
         return ResponseEntity.ok().build();
     }
-    
-    // ... (restante dos métodos do controller)
+
     @PostMapping("/posts")
     public ResponseEntity<Post> createPost(
             @RequestParam String title,
